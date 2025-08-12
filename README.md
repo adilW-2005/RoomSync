@@ -1,3 +1,0 @@
-# RoomSync
-
-Initialized repository.
