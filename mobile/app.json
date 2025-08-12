@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "RoomSync UT",
+    "slug": "roomsync-ut",
+    "version": "0.1.0",
+    "scheme": "roomsync",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "RoomSync uses your location to share presence with your roommates.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "RoomSync uses your location to share presence with your roommates in the background.",
+        "UIBackgroundModes": ["location"]
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "EXPO_PUBLIC_API_URL": "http://172.23.23.138:4000",
+      "EXPO_PUBLIC_WS_URL": "http://172.23.23.138:4000"
+    }
+  }
+} 

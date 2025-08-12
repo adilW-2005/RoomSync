@@ -1,0 +1,50 @@
+[
+  {
+    "placeId": "jester-east",
+    "placeName": "Jester East",
+    "lat": 30.2849,
+    "lng": -97.7360
+  },
+  {
+    "placeId": "san-jac",
+    "placeName": "San Jacinto Residence Hall",
+    "lat": 30.2842,
+    "lng": -97.7327
+  },
+  {
+    "placeId": "kinsolving",
+    "placeName": "Kinsolving Residence Hall",
+    "lat": 30.2906,
+    "lng": -97.7378
+  },
+  {
+    "placeId": "callaway-house",
+    "placeName": "Callaway House",
+    "lat": 30.2857,
+    "lng": -97.7452
+  },
+  {
+    "placeId": "torre",
+    "placeName": "The Torre",
+    "lat": 30.2878,
+    "lng": -97.7455
+  },
+  {
+    "placeId": "waterloo",
+    "placeName": "Waterloo",
+    "lat": 30.2816,
+    "lng": -97.7420
+  },
+  {
+    "placeId": "the-block",
+    "placeName": "The Block",
+    "lat": 30.2846,
+    "lng": -97.7459
+  },
+  {
+    "placeId": "castilian",
+    "placeName": "The Castilian",
+    "lat": 30.2870,
+    "lng": -97.7428
+  }
+] 
