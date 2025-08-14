@@ -2,7 +2,7 @@ const { Router } = require('express');
 const Joi = require('joi');
 const rateLimit = require('express-rate-limit');
 const { authRequired } = require('../middlewares/auth');
-const { listListings, createListing, updateListing } = require('../services/listingService');
+const { listListings, createListing, updateListing, toggleFavorite } = require('../services/listingService');
 
 const router = Router();
 
@@ -39,6 +39,7 @@ router.post('/', authRequired, createLimiter, async (req, res, next) => {
       description: Joi.string().allow('').optional(),
       price: Joi.number().min(0).required(),
       photos: Joi.array().items(Joi.string()).default([]),
+      photosBase64: Joi.array().items(Joi.string().base64({ paddingRequired: false })).optional(),
       loc: Joi.object({ lat: Joi.number().required(), lng: Joi.number().required() }).required(),
       availableFrom: Joi.date().optional(),
       availableTo: Joi.date().optional(),
@@ -85,6 +86,20 @@ router.patch('/:id', authRequired, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+
+router.post('/:id/favorite', authRequired, async (req, res, next) => {
+  try {
+    const result = await toggleFavorite(req.user, req.params.id, true);
+    return res.success(result);
+  } catch (e) { next(e); }
+});
+
+router.post('/:id/unfavorite', authRequired, async (req, res, next) => {
+  try {
+    const result = await toggleFavorite(req.user, req.params.id, false);
+    return res.success(result);
+  } catch (e) { next(e); }
 });
 
 module.exports = router; 

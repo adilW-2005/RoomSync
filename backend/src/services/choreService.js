@@ -159,7 +159,7 @@ async function completeChore(user, id) {
 }
 
 function notifyChoreAssigned(_chore) {
-  // Stub: Here we could enqueue a push notification or email.
+  // Stub: enqueue push notification per assignee when due time approaches.
   return true;
 }
 

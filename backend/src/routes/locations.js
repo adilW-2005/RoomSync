@@ -9,6 +9,7 @@ const beaconSchema = Joi.object({
   groupId: Joi.string().required(),
   lat: Joi.number().required(),
   lng: Joi.number().required(),
+  battery: Joi.number().min(0).max(100).optional(),
 });
 
 router.post('/beacon', authRequired, async (req, res, next) => {
@@ -22,7 +23,7 @@ router.post('/beacon', authRequired, async (req, res, next) => {
       throw err;
     }
     // Update presence registry
-    updatePresence(value.groupId, req.user._id, value.lat, value.lng, new Date());
+    updatePresence(value.groupId, req.user._id, value.lat, value.lng, new Date(), value.battery);
 
     // Broadcast over socket for same group (optional)
     const { tryGetIO } = require('../socket');
@@ -33,6 +34,7 @@ router.post('/beacon', authRequired, async (req, res, next) => {
         groupId: String(value.groupId),
         lat: value.lat,
         lng: value.lng,
+        battery: value.battery,
         updatedAt: new Date().toISOString(),
       });
     }

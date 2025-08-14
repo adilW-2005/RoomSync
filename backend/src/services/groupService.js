@@ -52,4 +52,69 @@ async function getCurrentGroup(user) {
   return group ? group.toJSON() : null;
 }
 
-module.exports = { createGroup, joinGroupByCode, getCurrentGroup }; 
+async function updateCurrentGroup(user, updates) {
+  const groupId = (user.groups || [])[0];
+  if (!groupId) {
+    const err = new Error('User not in a group');
+    err.status = 400;
+    err.code = 'NO_GROUP';
+    throw err;
+  }
+  const group = await Group.findById(groupId);
+  if (!group) {
+    const err = new Error('Group not found');
+    err.status = 404;
+    err.code = 'GROUP_NOT_FOUND';
+    throw err;
+  }
+  if (updates.name !== undefined) group.name = updates.name;
+  await group.save();
+  const fresh = await Group.findById(groupId).populate('members');
+  return fresh.toJSON();
+}
+
+async function regenerateCurrentGroupCode(user) {
+  const groupId = (user.groups || [])[0];
+  if (!groupId) {
+    const err = new Error('User not in a group');
+    err.status = 400;
+    err.code = 'NO_GROUP';
+    throw err;
+  }
+  let code = generateGroupCode();
+  let attempts = 0;
+  while (true) {
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await Group.findOne({ code });
+    if (!exists) break;
+    code = generateGroupCode();
+    attempts += 1;
+    if (attempts > 10) throw new Error('Could not generate unique group code');
+  }
+  await Group.updateOne({ _id: groupId }, { $set: { code } });
+  const fresh = await Group.findById(groupId).populate('members');
+  return fresh.toJSON();
+}
+
+async function removeMemberFromCurrentGroup(user, userId) {
+  const groupId = (user.groups || [])[0];
+  if (!groupId) {
+    const err = new Error('User not in a group');
+    err.status = 400;
+    err.code = 'NO_GROUP';
+    throw err;
+  }
+  const group = await Group.findById(groupId);
+  if (!group) {
+    const err = new Error('Group not found');
+    err.status = 404;
+    err.code = 'GROUP_NOT_FOUND';
+    throw err;
+  }
+  await Group.updateOne({ _id: groupId }, { $pull: { members: userId } });
+  await User.updateOne({ _id: userId }, { $pull: { groups: groupId } });
+  const fresh = await Group.findById(groupId).populate('members');
+  return fresh.toJSON();
+}
+
+module.exports = { createGroup, joinGroupByCode, getCurrentGroup, updateCurrentGroup, regenerateCurrentGroupCode, removeMemberFromCurrentGroup }; 

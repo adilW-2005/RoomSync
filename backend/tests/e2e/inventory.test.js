@@ -57,4 +57,29 @@ test('update inventory quantity', async () => {
     .send({ qty: 3 })
     .expect(200);
   expect(updated.body.data.qty).toBe(3);
+});
+
+test('search inventory and delete item', async () => {
+  const user = await User.create({ email: 'inv3@ex.com', passwordHash: await bcrypt.hash('p', 10), name: 'Inv3' });
+  const group = await Group.create({ name: 'Group I3', code: 'IN33IN', members: [user._id] });
+  user.groups = [group._id];
+  await user.save();
+
+  await request(app).post('/inventory').set('Authorization', authHeaderFor(user)).send({ name: 'Paper Towels', qty: 6, shared: true }).expect(200);
+  await request(app).post('/inventory').set('Authorization', authHeaderFor(user)).send({ name: 'Shampoo', qty: 2, shared: false }).expect(200);
+
+  const search = await request(app)
+    .get('/inventory?q=paper')
+    .set('Authorization', authHeaderFor(user))
+    .expect(200);
+  expect(search.body.data.length).toBe(1);
+  const itemId = search.body.data[0].id;
+
+  await request(app)
+    .delete(`/inventory/${itemId}`)
+    .set('Authorization', authHeaderFor(user))
+    .expect(200);
+
+  const after = await request(app).get('/inventory').set('Authorization', authHeaderFor(user)).expect(200);
+  expect(after.body.data.find((i) => i.id === itemId)).toBeFalsy();
 }); 

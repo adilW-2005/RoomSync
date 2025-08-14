@@ -1,13 +1,13 @@
 const { Router } = require('express');
 const Joi = require('joi');
 const { authRequired } = require('../middlewares/auth');
-const { listInventory, createInventory, updateInventory } = require('../services/inventoryService');
+const { listInventory, createInventory, updateInventory, deleteInventory } = require('../services/inventoryService');
 
 const router = Router();
 
 router.get('/', authRequired, async (req, res, next) => {
   try {
-    const schema = Joi.object({ groupId: Joi.string().optional() });
+    const schema = Joi.object({ groupId: Joi.string().optional(), q: Joi.string().allow('').optional() });
     const { error, value } = schema.validate(req.query);
     if (error) {
       const err = new Error('Invalid input');
@@ -32,6 +32,7 @@ router.post('/', authRequired, async (req, res, next) => {
       qty: Joi.number().min(0).required(),
       shared: Joi.boolean().default(false),
       expiresAt: Joi.date().optional(),
+      photoBase64: Joi.string().base64({ paddingRequired: false }).optional(),
     });
     const { error, value } = schema.validate(req.body);
     if (error) {
@@ -55,6 +56,7 @@ router.patch('/:id', authRequired, async (req, res, next) => {
       qty: Joi.number().min(0).optional(),
       shared: Joi.boolean().optional(),
       expiresAt: Joi.date().optional(),
+      photoBase64: Joi.string().base64({ paddingRequired: false }).optional(),
     });
     const { error, value } = schema.validate(req.body);
     if (error) {
@@ -65,6 +67,15 @@ router.patch('/:id', authRequired, async (req, res, next) => {
       throw err;
     }
     const result = await updateInventory(req.user, req.params.id, value);
+    return res.success(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete('/:id', authRequired, async (req, res, next) => {
+  try {
+    const result = await deleteInventory(req.user, req.params.id);
     return res.success(result);
   } catch (e) {
     next(e);

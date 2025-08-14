@@ -66,4 +66,37 @@ test('create custom split expense and validate shares sum', async () => {
     .send({ amount: 30, split: 'custom', shares: [{ userId: String(a._id), amount: 10 }] })
     .expect(400);
   expect(bad.body.code).toBe('SHARES_MISMATCH');
+});
+
+test('expenses history pagination, export csv, and settle-up', async () => {
+  const a = await User.create({ email: 'e@ex.com', passwordHash: await bcrypt.hash('p', 10), name: 'E' });
+  const b = await User.create({ email: 'f@ex.com', passwordHash: await bcrypt.hash('p', 10), name: 'F' });
+  const group = await Group.create({ name: 'Group Z', code: 'EX33EX', members: [a._id, b._id] });
+  a.groups = [group._id]; b.groups = [group._id]; await a.save(); await b.save();
+
+  for (let i = 0; i < 5; i++) {
+    await request(app)
+      .post('/expenses')
+      .set('Authorization', authHeaderFor(a))
+      .send({ amount: 10 + i, split: 'equal' })
+      .expect(200);
+  }
+
+  const page1 = await request(app)
+    .get('/expenses?page=1&limit=3')
+    .set('Authorization', authHeaderFor(a))
+    .expect(200);
+  expect(page1.body.data.items.length).toBe(3);
+
+  const csv = await request(app)
+    .get('/expenses/export.csv')
+    .set('Authorization', authHeaderFor(a))
+    .expect(200);
+  expect(csv.text).toContain('userId,amount');
+
+  await request(app)
+    .post('/expenses/settle')
+    .set('Authorization', authHeaderFor(a))
+    .send({ fromUserId: String(a._id), toUserId: String(b._id), amount: 5 })
+    .expect(200);
 }); 

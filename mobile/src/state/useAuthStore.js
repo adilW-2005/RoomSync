@@ -23,10 +23,10 @@ const useAuthStore = create((set, get) => ({
       set({ hydrated: true });
     }
   },
-  async register({ email, password, name }) {
+  async register({ email, password, name, avatarBase64 }) {
     set({ loading: true });
     try {
-      const res = await api.post('/auth/register', { email, password, name });
+      const res = await api.post('/auth/register', { email, password, name, avatarBase64 });
       setAccessToken(res.access_token);
       set({ user: res.user, token: res.access_token, loading: false });
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ user: res.user, token: res.access_token }));
@@ -48,6 +48,13 @@ const useAuthStore = create((set, get) => ({
       set({ loading: false });
       throw e;
     }
+  },
+  async updateProfile(payload) {
+    const updated = await api.patch('/users/me', payload);
+    set({ user: updated });
+    const token = get().token;
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ user: updated, token }));
+    return updated;
   },
   async logout() {
     setAccessToken(null);

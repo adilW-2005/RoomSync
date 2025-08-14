@@ -36,6 +36,18 @@ function attachSocket(server) {
         io.to(String(payload.groupId)).emit('hangout:vote', payload);
       }
     });
+
+    // Listing chat demo: broadcast to seller specifically via seller room
+    socket.on('chat:message', (payload) => {
+      if (payload?.toSellerId) {
+        io.to(String(payload.toSellerId)).emit('chat:message', payload);
+      }
+    });
+
+    // Allow users to join their own user room for direct messages
+    socket.on('join:user', ({ userId }) => {
+      if (userId) socket.join(String(userId));
+    });
   });
 }
 

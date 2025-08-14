@@ -1,6 +1,6 @@
-const presenceByGroup = new Map(); // groupId -> Map(userId, { lat, lng, updatedAt })
+const presenceByGroup = new Map(); // groupId -> Map(userId, { lat, lng, updatedAt, battery })
 
-function updatePresence(groupId, userId, lat, lng, updatedAt = new Date()) {
+function updatePresence(groupId, userId, lat, lng, updatedAt = new Date(), battery) {
   const gid = String(groupId);
   const uid = String(userId);
   let groupMap = presenceByGroup.get(gid);
@@ -8,7 +8,7 @@ function updatePresence(groupId, userId, lat, lng, updatedAt = new Date()) {
     groupMap = new Map();
     presenceByGroup.set(gid, groupMap);
   }
-  groupMap.set(uid, { lat: Number(lat), lng: Number(lng), updatedAt: new Date(updatedAt) });
+  groupMap.set(uid, { lat: Number(lat), lng: Number(lng), updatedAt: new Date(updatedAt), battery: typeof battery === 'number' ? Number(battery) : undefined });
 }
 
 function getGroupPresence(groupId) {

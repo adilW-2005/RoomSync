@@ -32,6 +32,10 @@ router.post('/', authRequired, async (req, res, next) => {
       endAt: Joi.date().required(),
       locationText: Joi.string().allow('').default(''),
       attendees: Joi.array().items(Joi.string()).default([]),
+      lat: Joi.number().optional(),
+      lng: Joi.number().optional(),
+      repeat: Joi.string().valid('none', 'daily', 'weekly', 'custom').default('none'),
+      customDays: Joi.array().items(Joi.number().min(0).max(6)).default([]),
     });
     const { error, value } = schema.validate(req.body);
     if (error) {
@@ -56,6 +60,10 @@ router.patch('/:id', authRequired, async (req, res, next) => {
       endAt: Joi.date().optional(),
       locationText: Joi.string().allow('').optional(),
       attendees: Joi.array().items(Joi.string()).optional(),
+      lat: Joi.number().optional(),
+      lng: Joi.number().optional(),
+      repeat: Joi.string().valid('none', 'daily', 'weekly', 'custom').optional(),
+      customDays: Joi.array().items(Joi.number().min(0).max(6)).optional(),
     });
     const { error, value } = schema.validate(req.body);
     if (error) {

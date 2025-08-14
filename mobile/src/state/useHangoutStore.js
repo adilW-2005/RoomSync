@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { getSocket } from '../lib/socket';
 
 const useHangoutStore = create((set, get) => ({
-  proposals: [], // [{ id, title, time, authorId, votes: { [userId]: 'yes'|'no' } }]
+  proposals: [], // [{ id, title, time, authorId, desc?, loc?, votes: { [userId]: 'yes'|'no' } }]
   addProposal(p) {
     set({ proposals: [p, ...get().proposals] });
   },
@@ -16,9 +16,9 @@ const useHangoutStore = create((set, get) => ({
       }),
     });
   },
-  propose({ title, time, authorId, groupId }) {
+  propose({ title, time, authorId, groupId, desc, loc }) {
     const socket = getSocket();
-    const payload = { id: `${Date.now()}`, title, time, authorId, groupId, votes: {} };
+    const payload = { id: `${Date.now()}`, title, time, authorId, groupId, desc, loc, votes: {} };
     socket?.emit('hangout:proposal', payload);
     // Optimistic update
     set({ proposals: [payload, ...get().proposals] });

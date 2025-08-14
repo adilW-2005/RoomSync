@@ -8,6 +8,7 @@ const inventorySchema = new mongoose.Schema({
   qty: { type: Number, required: true, min: 0 },
   shared: { type: Boolean, default: false },
   expiresAt: { type: Date },
+  photoUrl: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 

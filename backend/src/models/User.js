@@ -9,6 +9,9 @@ const userSchema = new mongoose.Schema({
   groups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Group' }],
   role: { type: String, enum: ['student', 'admin'], default: 'student' },
   avatarUrl: { type: String },
+  bio: { type: String },
+  contact: { type: String },
+  favoriteListings: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Listing' }],
   createdAt: { type: Date, default: Date.now },
 });
 

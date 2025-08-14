@@ -11,7 +11,7 @@ import useMemberStore from '../../state/useMemberStore';
 export default function MapScreen() {
   const [region, setRegion] = useState({ latitude: 30.2849, longitude: -97.736, latitudeDelta: 0.02, longitudeDelta: 0.02 });
   const [ratings, setRatings] = useState({});
-  const [roommatePins, setRoommatePins] = useState({}); // userId -> { lat, lng, updatedAt }
+  const [roommatePins, setRoommatePins] = useState({}); // userId -> { lat, lng, updatedAt, battery }
   const { token } = useAuthStore();
   const { currentGroup } = useGroupStore();
   const { membersById, fetchCurrentGroupMembers } = useMemberStore();
@@ -41,7 +41,7 @@ export default function MapScreen() {
       try {
         const presence = await api.get(`/locations/presence?groupId=${currentGroup.id}`);
         const map = {};
-        for (const p of presence) map[p.userId] = { lat: p.lat, lng: p.lng, updatedAt: p.updatedAt };
+        for (const p of presence) map[p.userId] = { lat: p.lat, lng: p.lng, updatedAt: p.updatedAt, battery: p.battery };
         setRoommatePins(map);
       } catch (_) {}
       // Connect socket if not connected
@@ -50,7 +50,7 @@ export default function MapScreen() {
       joinGroupRoom(currentGroup.id);
       offUpdate = onLocationUpdate((payload) => {
         if (String(payload.groupId) !== String(currentGroup.id)) return;
-        setRoommatePins((prev) => ({ ...prev, [payload.userId]: { lat: payload.lat, lng: payload.lng, updatedAt: payload.updatedAt } }));
+        setRoommatePins((prev) => ({ ...prev, [payload.userId]: { lat: payload.lat, lng: payload.lng, updatedAt: payload.updatedAt, battery: payload.battery } }));
       });
     })();
     return () => {
@@ -65,6 +65,12 @@ export default function MapScreen() {
     if (avg >= 4.5) return '#2ecc71';
     if (avg >= 3.5) return '#f1c40f';
     return '#e74c3c';
+  };
+
+  const descFor = (pos) => {
+    if (!pos) return '';
+    if (typeof pos.battery === 'number') return `Battery ${pos.battery}%`;
+    return pos.updatedAt ? new Date(pos.updatedAt).toLocaleTimeString() : '';
   };
 
   return (
@@ -82,7 +88,7 @@ export default function MapScreen() {
             key={`rm-${userId}`}
             coordinate={{ latitude: pos.lat, longitude: pos.lng }}
             title={`${membersById[userId] || 'Roommate'} (${userId.substring(0, 4)})`}
-            description={pos.updatedAt ? new Date(pos.updatedAt).toLocaleTimeString() : ''}
+            description={descFor(pos)}
             pinColor="#1E90FF"
           />
         ))}

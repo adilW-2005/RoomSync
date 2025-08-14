@@ -58,6 +58,10 @@ async function createEvent(user, payload) {
     startAt,
     endAt,
     locationText: payload.locationText || '',
+    lat: payload.lat,
+    lng: payload.lng,
+    repeat: payload.repeat || 'none',
+    customDays: payload.customDays || [],
     attendees,
     createdBy: user._id,
   });
@@ -80,7 +84,7 @@ async function updateEvent(user, id, updates) {
     throw err;
   }
 
-  const allowed = ['title', 'startAt', 'endAt', 'locationText', 'attendees'];
+  const allowed = ['title', 'startAt', 'endAt', 'locationText', 'attendees', 'lat', 'lng', 'repeat', 'customDays'];
   for (const key of allowed) {
     if (updates[key] !== undefined) {
       if (key === 'attendees') {

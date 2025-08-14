@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Expense = require('../models/Expense');
 const Group = require('../models/Group');
+const { uploadBase64ToCloudinary } = require('./cloudinaryService');
 
 function getCurrentGroupIdForUser(user) {
   const groupId = (user.groups || [])[0];
@@ -17,6 +18,16 @@ async function listExpenses(user, query = {}) {
   const groupId = query.groupId || getCurrentGroupIdForUser(user);
   const expenses = await Expense.find({ groupId }).sort({ createdAt: -1 });
   return expenses.map((e) => e.toJSON());
+}
+
+async function getHistoryPaginated(user, { groupId: gid, page = 1, limit = 20 } = {}) {
+  const groupId = gid || getCurrentGroupIdForUser(user);
+  const skip = (page - 1) * limit;
+  const [items, total] = await Promise.all([
+    Expense.find({ groupId }).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    Expense.countDocuments({ groupId }),
+  ]);
+  return { items: items.map((e) => e.toJSON()), page, limit, total };
 }
 
 async function createExpense(user, payload) {
@@ -85,6 +96,11 @@ async function createExpense(user, payload) {
     throw err;
   }
 
+  let receiptUrl;
+  if (payload.receiptBase64) {
+    receiptUrl = await uploadBase64ToCloudinary(payload.receiptBase64, 'receipts');
+  }
+
   const expense = await Expense.create({
     groupId,
     payerId,
@@ -92,6 +108,7 @@ async function createExpense(user, payload) {
     split: payload.split,
     shares,
     notes: payload.notes || '',
+    receiptUrl,
   });
 
   return expense.toJSON();
@@ -118,4 +135,24 @@ async function getBalances(user, query = {}) {
   return balances;
 }
 
-module.exports = { listExpenses, createExpense, getBalances }; 
+async function settleUp(user, { fromUserId, toUserId, amount, groupId: gid }) {
+  const groupId = gid || getCurrentGroupIdForUser(user);
+  // Represent settlement as a special expense: payer=fromUser, shares=[{userId: toUser, amount}]
+  const payload = {
+    groupId,
+    payerId: fromUserId,
+    amount,
+    split: 'custom',
+    shares: [{ userId: toUserId, amount }],
+    notes: 'Settle-up payment',
+  };
+  return createExpense(user, payload);
+}
+
+async function exportBalancesCsv(user, query = {}) {
+  const balances = await getBalances(user, query);
+  const rows = [['userId', 'amount'], ...balances.map((b) => [b.userId, b.amount])];
+  return rows.map((r) => r.join(',')).join('\n');
+}
+
+module.exports = { listExpenses, createExpense, getBalances, getHistoryPaginated, settleUp, exportBalancesCsv }; 

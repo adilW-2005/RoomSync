@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Inventory = require('../models/Inventory');
 const Group = require('../models/Group');
+const { uploadBase64ToCloudinary } = require('./cloudinaryService');
 
 function getCurrentGroupIdForUser(user) {
   const groupId = (user.groups || [])[0];
@@ -15,7 +16,9 @@ function getCurrentGroupIdForUser(user) {
 
 async function listInventory(user, query = {}) {
   const groupId = query.groupId || getCurrentGroupIdForUser(user);
-  const items = await Inventory.find({ groupId }).sort({ createdAt: -1 });
+  const filter = { groupId };
+  if (query.q) filter.name = { $regex: query.q, $options: 'i' };
+  const items = await Inventory.find(filter).sort({ createdAt: -1 });
   return items.map((i) => i.toJSON());
 }
 
@@ -36,6 +39,10 @@ async function createInventory(user, payload) {
     err.code = 'OWNER_NOT_IN_GROUP';
     throw err;
   }
+  let photoUrl;
+  if (payload.photoBase64) {
+    photoUrl = await uploadBase64ToCloudinary(payload.photoBase64, 'inventory');
+  }
   const item = await Inventory.create({
     groupId,
     ownerId,
@@ -43,6 +50,7 @@ async function createInventory(user, payload) {
     qty: Number(payload.qty),
     shared: Boolean(payload.shared),
     expiresAt: payload.expiresAt ? new Date(payload.expiresAt) : undefined,
+    photoUrl,
   });
   return item.toJSON();
 }
@@ -70,8 +78,30 @@ async function updateInventory(user, id, updates) {
       else item[key] = updates[key];
     }
   }
+  if (updates.photoBase64) {
+    item.photoUrl = await uploadBase64ToCloudinary(updates.photoBase64, 'inventory');
+  }
   await item.save();
   return item.toJSON();
 }
 
-module.exports = { listInventory, createInventory, updateInventory }; 
+async function deleteInventory(user, id) {
+  const item = await Inventory.findById(id);
+  if (!item) {
+    const err = new Error('Item not found');
+    err.status = 404;
+    err.code = 'ITEM_NOT_FOUND';
+    throw err;
+  }
+  const userGroups = (user.groups || []).map(String);
+  if (!userGroups.includes(String(item.groupId))) {
+    const err = new Error('Forbidden');
+    err.status = 403;
+    err.code = 'FORBIDDEN';
+    throw err;
+  }
+  await Inventory.deleteOne({ _id: id });
+  return { id };
+}
+
+module.exports = { listInventory, createInventory, updateInventory, deleteInventory }; 

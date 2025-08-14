@@ -5,23 +5,18 @@
     "version": "0.1.0",
     "scheme": "roomsync",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
-    },
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "RoomSync uses your location to share presence with your roommates.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "RoomSync uses your location to share presence with your roommates in the background.",
-        "UIBackgroundModes": ["location"]
+        "UIBackgroundModes": [
+          "location"
+        ]
       }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       },
       "permissions": [
@@ -31,12 +26,14 @@
       ]
     },
     "web": {
-      "bundler": "metro",
-      "favicon": "./assets/favicon.png"
+      "bundler": "metro"
     },
     "extra": {
-      "EXPO_PUBLIC_API_URL": "http://172.23.23.138:4000",
-      "EXPO_PUBLIC_WS_URL": "http://172.23.23.138:4000"
-    }
+      "EXPO_PUBLIC_API_URL": "${EXPO_PUBLIC_API_URL}",
+      "EXPO_PUBLIC_WS_URL": "${EXPO_PUBLIC_WS_URL}"
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
-} 
+}

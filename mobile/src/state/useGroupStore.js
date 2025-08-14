@@ -35,6 +35,24 @@ const useGroupStore = create((set, get) => ({
     set({ currentGroup: group });
     if (group) await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(group));
     return group;
+  },
+  async rename(name) {
+    const group = await api.patch('/groups/current', { name });
+    set({ currentGroup: group });
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(group));
+    return group;
+  },
+  async regenerateCode() {
+    const group = await api.post('/groups/current/regenerate-code');
+    set({ currentGroup: group });
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(group));
+    return group;
+  },
+  async removeMember(userId) {
+    const group = await api.post('/groups/current/remove-member', { userId });
+    set({ currentGroup: group });
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(group));
+    return group;
   }
 }));
 

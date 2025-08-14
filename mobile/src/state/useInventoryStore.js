@@ -4,10 +4,11 @@ import api from '../api/client';
 const useInventoryStore = create((set, get) => ({
   items: [],
   loading: false,
-  async fetchItems() {
+  async fetchItems({ q } = {}) {
     set({ loading: true });
     try {
-      const items = await api.get('/inventory');
+      const url = q ? `/inventory?q=${encodeURIComponent(q)}` : '/inventory';
+      const items = await api.get(url);
       set({ items, loading: false });
     } catch (e) {
       set({ loading: false });
@@ -24,6 +25,10 @@ const useInventoryStore = create((set, get) => ({
     set({ items: (get().items || []).map((i) => (i.id === id ? updated : i)) });
     return updated;
   },
+  async deleteItem(id) {
+    await api.delete(`/inventory/${id}`);
+    set({ items: (get().items || []).filter((i) => i.id !== id) });
+  }
 }));
 
 export default useInventoryStore; 

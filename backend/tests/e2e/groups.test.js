@@ -68,4 +68,63 @@ test('join group by code', async () => {
     .expect(200);
 
   expect(res.body.data.members.length).toBe(2);
+});
+
+async function authAgent() {
+  const email = `test${Date.now()}@utexas.edu`;
+  const res = await request(app)
+    .post('/auth/register')
+    .send({ email, password: 'test1234', name: 'Tester' });
+  const token = res.body.data.access_token;
+  const header = { Authorization: `Bearer ${token}` };
+  const agent = {
+    get: (url) => request(app).get(url).set(header),
+    post: (url) => request(app).post(url).set(header),
+    patch: (url) => request(app).patch(url).set(header),
+    delete: (url) => request(app).delete(url).set(header),
+  };
+  return { agent, token };
+}
+
+describe('Group settings', () => {
+  test('rename group and regenerate code, remove member', async () => {
+    const { agent } = await authAgent();
+
+    // create group
+    const createRes = await agent.post('/groups').send({ name: 'Group One' });
+    expect(createRes.status).toBe(200);
+    const originalCode = createRes.body.data.code;
+
+    // rename
+    const renameRes = await agent.patch('/groups/current').send({ name: 'New Name' });
+    expect(renameRes.status).toBe(200);
+    expect(renameRes.body.data.name).toBe('New Name');
+
+    // regenerate code
+    const regenRes = await agent.post('/groups/current/regenerate-code').send();
+    expect(regenRes.status).toBe(200);
+    expect(regenRes.body.data.code).not.toBe(originalCode);
+
+    // add a second user and join
+    const email2 = `test2${Date.now()}@utexas.edu`;
+    const res2 = await request(app).post('/auth/register').send({ email: email2, password: 'test1234', name: 'Peer' });
+    const token2 = res2.body.data.access_token;
+    const header2 = { Authorization: `Bearer ${token2}` };
+    const agent2 = {
+      post: (url) => request(app).post(url).set(header2),
+      get: (url) => request(app).get(url).set(header2),
+    };
+    const currentGroup = await agent.get('/groups/current');
+    const code = currentGroup.body.data.code;
+    await agent2.post('/groups/join').send({ code });
+
+    const fresh = await agent.get('/groups/current');
+    const peer = fresh.body.data.members.find((m) => m.email === email2);
+
+    // remove peer
+    const rm = await agent.post('/groups/current/remove-member').send({ userId: peer.id });
+    expect(rm.status).toBe(200);
+    const after = await agent.get('/groups/current');
+    expect(after.body.data.members.find((m) => m.email === email2)).toBeFalsy();
+  });
 }); 

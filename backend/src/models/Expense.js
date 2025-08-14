@@ -16,6 +16,7 @@ const expenseSchema = new mongoose.Schema({
   split: { type: String, enum: ['equal', 'custom'], required: true },
   shares: { type: [shareSchema], default: [] },
   notes: { type: String },
+  receiptUrl: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 

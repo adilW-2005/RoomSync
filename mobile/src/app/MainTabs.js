@@ -14,6 +14,7 @@ import RatingsListScreen from '../screens/Ratings/RatingsListScreen';
 import RatingsDetailScreen from '../screens/Ratings/RatingsDetailScreen';
 import HangoutsScreen from '../screens/Hangouts/HangoutsScreen';
 import { Ionicons } from '@expo/vector-icons';
+import GroupSettingsScreen from '../screens/Settings/GroupSettingsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -32,6 +33,15 @@ function MarketplaceStack() {
     <Stack.Navigator>
       <Stack.Screen name="MarketplaceList" component={MarketplaceScreen} options={{ title: 'Marketplace', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
       <Stack.Screen name="ListingDetail" component={ListingDetailScreen} options={{ title: 'Listing', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+    </Stack.Navigator>
+  );
+}
+
+function SettingsStack() {
+  return (
+    <Stack.Navigator>
+      <Stack.Screen name="SettingsHome" component={SettingsScreen} options={{ title: 'Settings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} options={{ title: 'Group Settings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
     </Stack.Navigator>
   );
 }
@@ -68,7 +78,7 @@ export default function MainTabs() {
       <Tab.Screen name="Inventory" component={InventoryScreen} />
       <Tab.Screen name="Ratings" component={RatingsStack} options={{ headerShown: false }} />
       <Tab.Screen name="Hangouts" component={HangoutsScreen} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="Settings" component={SettingsStack} options={{ headerShown: false }} />
     </Tab.Navigator>
   );
 } 

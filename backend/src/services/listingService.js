@@ -1,4 +1,6 @@
 const Listing = require('../models/Listing');
+const User = require('../models/User');
+const { uploadBase64ToCloudinary } = require('./cloudinaryService');
 
 async function listListings(query = {}) {
   const filter = {};
@@ -15,13 +17,23 @@ async function listListings(query = {}) {
 }
 
 async function createListing(user, payload) {
+  let photos = Array.isArray(payload.photos) ? payload.photos : [];
+  if (Array.isArray(payload.photosBase64) && payload.photosBase64.length) {
+    const uploaded = [];
+    for (const b64 of payload.photosBase64) {
+      // eslint-disable-next-line no-await-in-loop
+      const url = await uploadBase64ToCloudinary(b64, 'listings');
+      uploaded.push(url);
+    }
+    photos = photos.concat(uploaded);
+  }
   const listing = await Listing.create({
     sellerId: user._id,
     type: payload.type,
     title: payload.title,
     description: payload.description || '',
     price: Number(payload.price),
-    photos: Array.isArray(payload.photos) ? payload.photos : [],
+    photos,
     loc: { lat: Number(payload.loc.lat), lng: Number(payload.loc.lng) },
     availableFrom: payload.availableFrom ? new Date(payload.availableFrom) : undefined,
     availableTo: payload.availableTo ? new Date(payload.availableTo) : undefined,
@@ -57,4 +69,11 @@ async function updateListing(user, id, updates) {
   return listing.toJSON();
 }
 
-module.exports = { listListings, createListing, updateListing }; 
+async function toggleFavorite(user, listingId, fav) {
+  const op = fav ? { $addToSet: { favoriteListings: listingId } } : { $pull: { favoriteListings: listingId } };
+  await User.updateOne({ _id: user._id }, op);
+  const fresh = await User.findById(user._id);
+  return fresh.toJSON();
+}
+
+module.exports = { listListings, createListing, updateListing, toggleFavorite }; 

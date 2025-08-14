@@ -7,7 +7,8 @@ const router = Router();
 const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
-  name: Joi.string().min(1).required()
+  name: Joi.string().min(1).required(),
+  avatarBase64: Joi.string().base64({ paddingRequired: false }).optional()
 });
 
 router.post('/register', async (req, res, next) => {

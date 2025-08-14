@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const Joi = require('joi');
 const { authRequired } = require('../middlewares/auth');
-const { getAverageByPlace, listByPlace, createRating } = require('../services/ratingService');
+const { getAverageByPlace, listByPlace, createRating, updateRating, deleteRating, listFiltered } = require('../services/ratingService');
 
 const router = Router();
 
@@ -41,6 +41,22 @@ router.get('/by-place', async (req, res, next) => {
   }
 });
 
+router.get('/', async (req, res, next) => {
+  try {
+    const schema = Joi.object({ kind: Joi.string().valid('apartment', 'dorm').optional(), q: Joi.string().optional() });
+    const { error, value } = schema.validate(req.query);
+    if (error) {
+      const err = new Error('Invalid input');
+      err.status = 400;
+      err.code = 'VALIDATION_ERROR';
+      err.details = error.details.map((d) => d.message);
+      throw err;
+    }
+    const result = await listFiltered(value);
+    return res.success(result);
+  } catch (e) { next(e); }
+});
+
 router.post('/', authRequired, async (req, res, next) => {
   try {
     const schema = Joi.object({
@@ -52,6 +68,7 @@ router.post('/', authRequired, async (req, res, next) => {
       cons: Joi.array().items(Joi.string()).default([]),
       tips: Joi.string().allow('').default(''),
       photos: Joi.array().items(Joi.string()).default([]),
+      photosBase64: Joi.array().items(Joi.string().base64({ paddingRequired: false })).optional(),
     });
     const { error, value } = schema.validate(req.body);
     if (error) {
@@ -66,6 +83,29 @@ router.post('/', authRequired, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+
+router.patch('/:id', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.object({ stars: Joi.number().min(1).max(5).optional(), pros: Joi.array().items(Joi.string()).optional(), cons: Joi.array().items(Joi.string()).optional(), tips: Joi.string().allow('').optional(), photos: Joi.array().items(Joi.string()).optional(), photosBase64: Joi.array().items(Joi.string().base64({ paddingRequired: false })).optional() });
+    const { error, value } = schema.validate(req.body);
+    if (error) {
+      const err = new Error('Invalid input');
+      err.status = 400;
+      err.code = 'VALIDATION_ERROR';
+      err.details = error.details.map((d) => d.message);
+      throw err;
+    }
+    const result = await updateRating(req.user, req.params.id, value);
+    return res.success(result);
+  } catch (e) { next(e); }
+});
+
+router.delete('/:id', authRequired, async (req, res, next) => {
+  try {
+    const result = await deleteRating(req.user, req.params.id);
+    return res.success(result);
+  } catch (e) { next(e); }
 });
 
 module.exports = router; 
