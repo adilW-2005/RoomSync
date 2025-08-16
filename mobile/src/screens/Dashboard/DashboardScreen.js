@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import useGroupStore from '../../state/useGroupStore';
 import GroupOnboarding from './GroupOnboarding';
 import useAuthStore from '../../state/useAuthStore';
 import { ensureSocket, joinGroupRoom } from '../../lib/socket';
+import UTText from '../../components/UTText';
+import UTCard from '../../components/UTCard';
+import { spacing, colors } from '../../styles/theme';
 
 export default function DashboardScreen({ navigation }) {
   const { currentGroup, getCurrent } = useGroupStore();
@@ -24,41 +27,43 @@ export default function DashboardScreen({ navigation }) {
   }, [token, currentGroup?.id]);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Howdy, Longhorn!</Text>
+    <ScrollView contentContainerStyle={styles.container}>
+      <UTText variant="title" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>Howdy, Longhorn!</UTText>
       {currentGroup ? (
-        <Text style={styles.text}>Group: {currentGroup.name} ({currentGroup.code})</Text>
+        <UTCard style={{ marginBottom: spacing.lg }}>
+          <UTText variant="subtitle" style={{ marginBottom: 4 }}>Group</UTText>
+          <UTText variant="body">{currentGroup.name} ({currentGroup.code})</UTText>
+        </UTCard>
       ) : (
-        <View style={{ marginBottom: 16 }}>
-          <Text style={styles.text}>Join or create a group to get started.</Text>
+        <View style={{ marginBottom: spacing.lg }}>
+          <UTText variant="body" style={{ marginBottom: spacing.sm }}>Join or create a group to get started.</UTText>
           <GroupOnboarding />
         </View>
       )}
+
       <View style={styles.row}>
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('Chores')}>
-          <Text style={styles.cardTitle}>Chores</Text>
+        <TouchableOpacity style={{ flex: 1 }} onPress={() => navigation.navigate('Chores')}>
+          <UTCard style={styles.navCard}><UTText variant="subtitle" style={styles.navText}>Chores</UTText></UTCard>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('Events')}>
-          <Text style={styles.cardTitle}>Events</Text>
+        <TouchableOpacity style={{ flex: 1 }} onPress={() => navigation.navigate('Events')}>
+          <UTCard style={styles.navCard}><UTText variant="subtitle" style={styles.navText}>Events</UTText></UTCard>
         </TouchableOpacity>
       </View>
       <View style={styles.row}>
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('Expenses')}>
-          <Text style={styles.cardTitle}>Expenses</Text>
+        <TouchableOpacity style={{ flex: 1 }} onPress={() => navigation.navigate('Expenses')}>
+          <UTCard style={styles.navCard}><UTText variant="subtitle" style={styles.navText}>Expenses</UTText></UTCard>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('Map')}>
-          <Text style={styles.cardTitle}>UT Map</Text>
+        <TouchableOpacity style={{ flex: 1 }} onPress={() => navigation.navigate('Map')}>
+          <UTCard style={styles.navCard}><UTText variant="subtitle" style={styles.navText}>UT Map</UTText></UTCard>
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  header: { fontSize: 24, color: '#BF5700', marginBottom: 12, fontFamily: 'Poppins_600SemiBold' },
-  text: { color: '#222', fontFamily: 'Poppins_400Regular', marginBottom: 16 },
-  row: { flexDirection: 'row', gap: 12 },
-  card: { flex: 1, backgroundColor: '#fff', borderRadius: 16, padding: 16, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, borderWidth: 1, borderColor: '#F2D388' },
-  cardTitle: { fontFamily: 'Poppins_600SemiBold', color: '#BF5700' }
+  container: { padding: spacing.lg, backgroundColor: '#F8F8F8' },
+  row: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
+  navCard: { alignItems: 'center', paddingVertical: spacing.xl },
+  navText: { color: colors.burntOrange },
 }); 

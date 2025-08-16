@@ -1,13 +1,18 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, TextInput, Alert, Image } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Switch, Alert, Image } from 'react-native';
 import useAuthStore from '../../state/useAuthStore';
 import useGroupStore from '../../state/useGroupStore';
 import api from '../../api/client';
 import { startBackgroundUpdates, stopBackgroundUpdates } from '../../lib/locationTask';
 import * as ImagePicker from 'expo-image-picker';
+import UTText from '../../components/UTText';
+import UTInput from '../../components/UTInput';
+import UTCard from '../../components/UTCard';
+import UTButton from '../../components/UTButton';
+import { spacing, colors } from '../../styles/theme';
 
 export default function SettingsScreen({ navigation }) {
-  const { logout, user, updateProfile } = useAuthStore();
+  const { logout, user, updateProfile, deleteAccount } = useAuthStore();
   const { currentGroup } = useGroupStore();
   const [sharing, setSharing] = React.useState(false);
   const [visibleToGroup, setVisibleToGroup] = React.useState(true);
@@ -17,10 +22,15 @@ export default function SettingsScreen({ navigation }) {
   const [contact, setContact] = React.useState(user?.contact || '');
   const [avatarBase64, setAvatarBase64] = React.useState(null);
 
+  const [prefs, setPrefs] = React.useState({
+    chores: user?.notificationPrefs?.chores !== false,
+    events: user?.notificationPrefs?.events !== false,
+    hangouts: user?.notificationPrefs?.hangouts !== false,
+    messages: user?.notificationPrefs?.messages !== false,
+  });
+
   React.useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
   }, []);
 
   const onToggle = async (value) => {
@@ -43,11 +53,7 @@ export default function SettingsScreen({ navigation }) {
 
   const onPick = async () => {
     try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        base64: true,
-        quality: 0.7
-      });
+      const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, base64: true, quality: 0.7 });
       if (!result?.canceled && result?.assets?.[0]?.base64) {
         setAvatarBase64(`data:image/jpeg;base64,${result.assets[0].base64}`);
       }
@@ -63,66 +69,77 @@ export default function SettingsScreen({ navigation }) {
     }
   };
 
+  const onSavePrefs = async () => {
+    try {
+      await api.post('/users/me/notification-prefs', prefs);
+      Alert.alert('Saved', 'Notification preferences updated');
+    } catch (e) {
+      Alert.alert('Update failed', e.message || 'Try again');
+    }
+  };
+
+  const onDelete = async () => {
+    Alert.alert('Delete Account', 'This will permanently delete your account. Continue?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => { try { await deleteAccount(); } catch (e) { Alert.alert('Delete failed', e.message || 'Try again'); } } }
+    ]);
+  };
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
+      <UTText variant="title" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>Settings</UTText>
       {currentGroup ? (
-        <View style={styles.groupCard}>
-          <Text style={styles.text}>Group: {currentGroup.name}</Text>
-          <Text style={styles.code}>Code: {currentGroup.code}</Text>
-          <TouchableOpacity style={styles.smallButton} onPress={() => navigation.navigate('GroupSettings')}> 
-            <Text style={styles.smallButtonText}>Group Settings</Text>
-          </TouchableOpacity>
-        </View>
+        <UTCard style={{ marginBottom: spacing.md }}>
+          <UTText variant="subtitle">Group: {currentGroup.name}</UTText>
+          <UTText variant="meta" style={{ marginTop: spacing.xs }}>Code: {currentGroup.code}</UTText>
+          <UTButton title="Group Settings" onPress={() => navigation.navigate('GroupSettings')} style={{ marginTop: spacing.sm, alignSelf: 'flex-start' }} />
+        </UTCard>
       ) : null}
 
-      <View style={styles.profileCard}>
-        <Text style={styles.sectionTitle}>Profile</Text>
+      <UTCard style={{ marginBottom: spacing.md }}>
+        <UTText variant="subtitle" style={{ marginBottom: spacing.sm }}>Profile</UTText>
         <TouchableOpacity onPress={onPick}>
           {avatarBase64 || user?.avatarUrl ? (
             <Image source={{ uri: avatarBase64 || user?.avatarUrl }} style={styles.avatar} />
           ) : (
-            <View style={styles.avatarPlaceholder}><Text style={{ color: '#8E8E93', fontFamily: 'Poppins_600SemiBold' }}>Add Avatar</Text></View>
+            <View style={styles.avatarPlaceholder}><UTText variant="meta" style={{ color: '#8E8E93' }}>Add Avatar</UTText></View>
           )}
         </TouchableOpacity>
-        <TextInput style={styles.input} placeholder="Name" value={name} onChangeText={setName} />
-        <TextInput style={styles.input} placeholder="Bio" value={bio} onChangeText={setBio} />
-        <TextInput style={styles.input} placeholder="Contact (phone/email)" value={contact} onChangeText={setContact} />
-        <TouchableOpacity style={styles.button} onPress={onSave}>
-          <Text style={styles.buttonText}>Save Profile</Text>
-        </TouchableOpacity>
-      </View>
+        <UTInput placeholder="Name" value={name} onChangeText={setName} style={{ marginBottom: spacing.md }} />
+        <UTInput placeholder="Bio" value={bio} onChangeText={setBio} style={{ marginBottom: spacing.md }} />
+        <UTInput placeholder="Contact (phone/email)" value={contact} onChangeText={setContact} style={{ marginBottom: spacing.md }} />
+        <UTButton title="Save Profile" onPress={onSave} />
+      </UTCard>
 
-      <View style={styles.row}> 
-        <Text style={styles.text}>Share Location</Text>
-        <Switch value={sharing} onValueChange={onToggle} />
-      </View>
-      <View style={styles.row}> 
-        <Text style={styles.text}>Visible to Group</Text>
-        <Switch value={visibleToGroup} onValueChange={setVisibleToGroup} />
-      </View>
+      <UTCard style={{ marginBottom: spacing.md }}>
+        <UTText variant="subtitle" style={{ marginBottom: spacing.sm }}>Notifications</UTText>
+        <View style={styles.row}><UTText variant="body">Chores</UTText><Switch value={prefs.chores} onValueChange={(v) => setPrefs({ ...prefs, chores: v })} /></View>
+        <View style={styles.row}><UTText variant="body">Events</UTText><Switch value={prefs.events} onValueChange={(v) => setPrefs({ ...prefs, events: v })} /></View>
+        <View style={styles.row}><UTText variant="body">Hangouts</UTText><Switch value={prefs.hangouts} onValueChange={(v) => setPrefs({ ...prefs, hangouts: v })} /></View>
+        <View style={styles.row}><UTText variant="body">Messages</UTText><Switch value={prefs.messages} onValueChange={(v) => setPrefs({ ...prefs, messages: v })} /></View>
+        <UTButton title="Save Preferences" onPress={onSavePrefs} style={{ marginTop: spacing.sm }} />
+      </UTCard>
 
-      <TouchableOpacity style={styles.button} onPress={logout}>
-        <Text style={styles.buttonText}>Logout</Text>
-      </TouchableOpacity>
+      <UTCard style={{ marginBottom: spacing.md }}>
+        <View style={styles.row}> 
+          <UTText variant="body">Share Location</UTText>
+          <Switch value={sharing} onValueChange={onToggle} />
+        </View>
+        <View style={styles.row}> 
+          <UTText variant="body">Visible to Group</UTText>
+          <Switch value={visibleToGroup} onValueChange={setVisibleToGroup} />
+        </View>
+      </UTCard>
+
+      <UTButton title="Logout" onPress={logout} style={{ marginBottom: spacing.md }} />
+      <UTButton title="Delete Account" variant="secondary" onPress={onDelete} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
-  title: { fontSize: 22, color: '#BF5700', fontFamily: 'Poppins_600SemiBold' },
-  text: { fontFamily: 'Poppins_400Regular', marginVertical: 8 },
-  code: { fontFamily: 'Poppins_600SemiBold', color: '#BF5700' },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: 12 },
-  profileCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginVertical: 12, borderWidth: 1, borderColor: '#F2D388' },
-  groupCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginVertical: 12, borderWidth: 1, borderColor: '#F2D388' },
-  sectionTitle: { fontFamily: 'Poppins_600SemiBold', color: '#333', marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 12, padding: 12, marginBottom: 12 },
-  button: { backgroundColor: '#BF5700', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 12 },
-  smallButton: { backgroundColor: '#BF5700', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, alignSelf: 'flex-start' },
-  smallButtonText: { color: '#fff', fontFamily: 'Poppins_600SemiBold' },
-  buttonText: { color: '#fff', fontFamily: 'Poppins_600SemiBold' },
-  avatar: { width: 72, height: 72, borderRadius: 36, marginBottom: 12 },
-  avatarPlaceholder: { width: 72, height: 72, borderRadius: 36, marginBottom: 12, borderWidth: 1, borderColor: '#E5E5EA', alignItems: 'center', justifyContent: 'center' }
+  container: { flex: 1, padding: spacing.lg, backgroundColor: '#F8F8F8' },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: spacing.xs },
+  avatar: { width: 72, height: 72, borderRadius: 36, marginBottom: spacing.sm },
+  avatarPlaceholder: { width: 72, height: 72, borderRadius: 36, marginBottom: spacing.sm, borderWidth: 1, borderColor: '#E5E5EA', alignItems: 'center', justifyContent: 'center' }
 }); 

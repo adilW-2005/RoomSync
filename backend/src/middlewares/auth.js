@@ -51,4 +51,12 @@ function requireGroupMember(paramSource = 'body', key = 'groupId') {
   };
 }
 
-module.exports = { authRequired, requireGroupMember }; 
+function requireAdmin(req, _res, next) {
+  if (req.user?.role === 'admin') return next();
+  const err = new Error('Forbidden');
+  err.status = 403;
+  err.code = 'FORBIDDEN';
+  return next(err);
+}
+
+module.exports = { authRequired, requireGroupMember, requireAdmin }; 

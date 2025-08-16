@@ -10,6 +10,18 @@ const choreSchema = new mongoose.Schema({
   dueAt: { type: Date, required: true },
   status: { type: String, enum: ['open', 'done'], default: 'open', index: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  pointsPerCompletion: { type: Number, default: 10 },
+  completions: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    completedAt: { type: Date, default: Date.now },
+    points: { type: Number, default: 10 },
+  }],
+  comments: [{
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    text: { type: String },
+    attachments: [{ type: String }],
+    createdAt: { type: Date, default: Date.now },
+  }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });

@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const Joi = require('joi');
 const { authRequired } = require('../middlewares/auth');
-const { listEvents, createEvent, updateEvent } = require('../services/eventService');
+const { listEvents, createEvent, updateEvent, setRsvp, getAttendeesWithStatus, exportICal } = require('../services/eventService');
 
 const router = Router();
 
@@ -21,6 +21,18 @@ router.get('/', authRequired, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+
+router.get('/export.ics', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.object({ groupId: Joi.string().optional() });
+    const { error, value } = schema.validate(req.query || {});
+    if (error) { const err = new Error('Invalid input'); err.status = 400; err.code = 'VALIDATION_ERROR'; err.details = error.details.map((d) => d.message); throw err; }
+    const ics = await exportICal(req.user, value);
+    res.setHeader('Content-Type', 'text/calendar');
+    res.setHeader('Content-Disposition', 'attachment; filename="events.ics"');
+    return res.send(ics);
+  } catch (e) { next(e); }
 });
 
 router.post('/', authRequired, async (req, res, next) => {
@@ -74,6 +86,33 @@ router.patch('/:id', authRequired, async (req, res, next) => {
       throw err;
     }
     const result = await updateEvent(req.user, req.params.id, value);
+    return res.success(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/:id/rsvp', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.object({ status: Joi.string().valid('going', 'maybe', 'not').required() });
+    const { error, value } = schema.validate(req.body);
+    if (error) {
+      const err = new Error('Invalid input');
+      err.status = 400;
+      err.code = 'VALIDATION_ERROR';
+      err.details = error.details.map((d) => d.message);
+      throw err;
+    }
+    const result = await setRsvp(req.user, req.params.id, value.status);
+    return res.success(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/:id/attendees', authRequired, async (req, res, next) => {
+  try {
+    const result = await getAttendeesWithStatus(req.user, req.params.id);
     return res.success(result);
   } catch (e) {
     next(e);

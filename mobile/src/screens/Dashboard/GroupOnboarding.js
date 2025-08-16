@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import useGroupStore from '../../state/useGroupStore';
+import UTText from '../../components/UTText';
+import UTInput from '../../components/UTInput';
+import UTButton from '../../components/UTButton';
+import UTCard from '../../components/UTCard';
+import { spacing } from '../../styles/theme';
 
 export default function GroupOnboarding() {
   const { createGroup, joinGroup } = useGroupStore();
@@ -35,30 +40,18 @@ export default function GroupOnboarding() {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Create a Group</Text>
-      <TextInput style={styles.input} placeholder="Group name" value={groupName} onChangeText={setGroupName} />
-      <TouchableOpacity style={styles.button} onPress={onCreate} disabled={loading}>
-        <Text style={styles.buttonText}>Create</Text>
-      </TouchableOpacity>
+    <UTCard>
+      <UTText variant="subtitle" style={{ marginBottom: spacing.sm }}>Create a Group</UTText>
+      <UTInput placeholder="Group name" value={groupName} onChangeText={setGroupName} style={{ marginBottom: spacing.md }} />
+      <UTButton title="Create" onPress={onCreate} disabled={loading} />
 
-      <View style={{ height: 24 }} />
+      <View style={{ height: spacing.lg }} />
 
-      <Text style={styles.header}>Join with Code</Text>
-      <TextInput style={styles.input} placeholder="e.g., AB12CD" value={code} onChangeText={setCode} autoCapitalize="characters" maxLength={6} />
-      <TouchableOpacity style={styles.buttonSecondary} onPress={onJoin} disabled={loading}>
-        <Text style={styles.buttonSecondaryText}>Join</Text>
-      </TouchableOpacity>
-    </View>
+      <UTText variant="subtitle" style={{ marginBottom: spacing.sm }}>Join with Code</UTText>
+      <UTInput placeholder="e.g., AB12CD" value={code} onChangeText={setCode} autoCapitalize="characters" maxLength={6} style={{ marginBottom: spacing.md }} />
+      <UTButton title="Join" variant="secondary" onPress={onJoin} disabled={loading} />
+    </UTCard>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { backgroundColor: '#fff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#F2D388', shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8 },
-  header: { fontSize: 18, color: '#BF5700', fontFamily: 'Poppins_600SemiBold', marginBottom: 8 },
-  input: { borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 12, padding: 12, marginBottom: 12 },
-  button: { backgroundColor: '#BF5700', padding: 12, borderRadius: 12, alignItems: 'center' },
-  buttonText: { color: '#fff', fontFamily: 'Poppins_600SemiBold' },
-  buttonSecondary: { backgroundColor: '#fff', padding: 12, borderRadius: 12, alignItems: 'center', borderWidth: 1, borderColor: '#BF5700' },
-  buttonSecondaryText: { color: '#BF5700', fontFamily: 'Poppins_600SemiBold' }
-}); 
+const styles = StyleSheet.create({}); 

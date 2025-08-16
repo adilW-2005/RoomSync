@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const Joi = require('joi');
 const { authRequired } = require('../middlewares/auth');
-const { listChores, createChore, updateChore, completeChore } = require('../services/choreService');
+const { listChores, createChore, updateChore, completeChore, addComment, getLeaderboard, getStreaks } = require('../services/choreService');
 
 const router = Router();
 
@@ -32,6 +32,7 @@ router.post('/', authRequired, async (req, res, next) => {
       repeat: Joi.string().valid('none', 'daily', 'weekly', 'custom').default('none'),
       customDays: Joi.array().items(Joi.number().min(0).max(6)).default([]),
       dueAt: Joi.date().required(),
+      pointsPerCompletion: Joi.number().integer().min(1).max(100).optional(),
     });
     const { error, value } = schema.validate(req.body);
     if (error) {
@@ -57,6 +58,7 @@ router.patch('/:id', authRequired, async (req, res, next) => {
       customDays: Joi.array().items(Joi.number().min(0).max(6)).optional(),
       dueAt: Joi.date().optional(),
       status: Joi.string().valid('open', 'done').optional(),
+      pointsPerCompletion: Joi.number().integer().min(1).max(100).optional(),
     });
     const { error, value } = schema.validate(req.body);
     if (error) {
@@ -80,6 +82,55 @@ router.post('/:id/complete', authRequired, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+
+router.post('/:id/comments', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.object({
+      text: Joi.string().max(500).allow('').optional(),
+      attachmentsBase64: Joi.array().items(Joi.string().min(1)).default([]),
+    });
+    const { error, value } = schema.validate(req.body || {});
+    if (error) {
+      const err = new Error('Invalid input');
+      err.status = 400;
+      err.code = 'VALIDATION_ERROR';
+      err.details = error.details.map((d) => d.message);
+      throw err;
+    }
+    const result = await addComment(req.user, req.params.id, value);
+    return res.success(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/leaderboard', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.object({ groupId: Joi.string().optional() });
+    const { error, value } = schema.validate(req.query || {});
+    if (error) {
+      const err = new Error('Invalid input');
+      err.status = 400;
+      err.code = 'VALIDATION_ERROR';
+      err.details = error.details.map((d) => d.message);
+      throw err;
+    }
+    const result = await getLeaderboard(req.user, value);
+    return res.success(result);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get('/streaks', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.object({ groupId: Joi.string().optional() });
+    const { error, value } = schema.validate(req.query || {});
+    if (error) { const err = new Error('Invalid input'); err.status = 400; err.code = 'VALIDATION_ERROR'; err.details = error.details.map((d) => d.message); throw err; }
+    const result = await getStreaks(req.user, value);
+    return res.success(result);
+  } catch (e) { next(e); }
 });
 
 module.exports = router; 

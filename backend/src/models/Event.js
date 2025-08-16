@@ -12,6 +12,7 @@ const eventSchema = new mongoose.Schema({
   repeat: { type: String, enum: ['none', 'daily', 'weekly', 'custom'], default: 'none' },
   customDays: [{ type: Number, min: 0, max: 6 }],
   attendees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  rsvps: [{ userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, status: { type: String, enum: ['going', 'maybe', 'not'], default: 'going' }, at: { type: Date, default: Date.now } }],
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   createdAt: { type: Date, default: Date.now },
 });

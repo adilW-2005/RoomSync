@@ -30,6 +30,84 @@ async function getHistoryPaginated(user, { groupId: gid, page = 1, limit = 20 } 
   return { items: items.map((e) => e.toJSON()), page, limit, total };
 }
 
+function normalizeSharesForSplit(split, amount, members, payloadShares) {
+  const toFixed2 = (n) => Number(Number(n).toFixed(2));
+  if (split === 'equal') {
+    const per = toFixed2(amount / members.length);
+    const remainder = toFixed2(amount - per * (members.length - 1));
+    return members.map((uid, idx) => ({ userId: uid, amount: idx === members.length - 1 ? remainder : per }));
+  }
+  if (split === 'custom' || split === 'unequal') {
+    if (!Array.isArray(payloadShares) || payloadShares.length === 0) {
+      const err = new Error('Shares required for custom/unequal split');
+      err.status = 400;
+      err.code = 'SHARES_REQUIRED';
+      throw err;
+    }
+    let total = 0;
+    const mapped = payloadShares.map((s) => ({ userId: s.userId, amount: Number(s.amount || 0) }));
+    for (const s of mapped) total += s.amount;
+    total = toFixed2(total);
+    if (total !== toFixed2(amount)) {
+      const err = new Error('Shares must sum to amount');
+      err.status = 400;
+      err.code = 'SHARES_MISMATCH';
+      throw err;
+    }
+    return mapped.map((s) => ({ userId: new mongoose.Types.ObjectId(s.userId), amount: toFixed2(s.amount) }));
+  }
+  if (split === 'percent') {
+    if (!Array.isArray(payloadShares) || payloadShares.length === 0) {
+      const err = new Error('Shares required for percent split');
+      err.status = 400;
+      err.code = 'SHARES_REQUIRED';
+      throw err;
+    }
+    let totalPct = 0;
+    for (const s of payloadShares) totalPct += Number(s.percent || 0);
+    if (Number(totalPct.toFixed(2)) !== 100) {
+      const err = new Error('Percents must total 100');
+      err.status = 400;
+      err.code = 'PERCENT_MISMATCH';
+      throw err;
+    }
+    return payloadShares.map((s, idx) => {
+      const amt = idx === payloadShares.length - 1 ? amount - payloadShares.slice(0, -1).reduce((acc, p) => acc + (Number(p.percent || 0) / 100) * amount, 0) : (Number(s.percent) / 100) * amount;
+      return { userId: new mongoose.Types.ObjectId(s.userId), amount: toFixed2(amt) };
+    });
+  }
+  if (split === 'shares') {
+    if (!Array.isArray(payloadShares) || payloadShares.length === 0) {
+      const err = new Error('Shares required for shares split');
+      err.status = 400;
+      err.code = 'SHARES_REQUIRED';
+      throw err;
+    }
+    let totalShares = 0;
+    for (const s of payloadShares) totalShares += Number(s.shares || 0);
+    if (!(totalShares > 0)) {
+      const err = new Error('Total shares must be > 0');
+      err.status = 400;
+      err.code = 'INVALID_SHARES_TOTAL';
+      throw err;
+    }
+    let accumulated = 0;
+    const mapped = payloadShares.map((s, idx) => {
+      if (idx === payloadShares.length - 1) {
+        return { userId: new mongoose.Types.ObjectId(s.userId), amount: toFixed2(amount - accumulated) };
+      }
+      const amt = toFixed2((Number(s.shares) / totalShares) * amount);
+      accumulated += amt;
+      return { userId: new mongoose.Types.ObjectId(s.userId), amount: amt };
+    });
+    return mapped;
+  }
+  const err = new Error('Invalid split type');
+  err.status = 400;
+  err.code = 'INVALID_SPLIT';
+  throw err;
+}
+
 async function createExpense(user, payload) {
   const groupId = payload.groupId || getCurrentGroupIdForUser(user);
   const group = await Group.findById(groupId);
@@ -57,44 +135,8 @@ async function createExpense(user, payload) {
     throw err;
   }
 
-  let shares = [];
   const members = Array.from(memberSet);
-
-  if (payload.split === 'equal') {
-    const per = Number((amount / members.length).toFixed(2));
-    const remainder = Number((amount - per * (members.length - 1)).toFixed(2));
-    shares = members.map((uid, idx) => ({ userId: uid, amount: idx === members.length - 1 ? remainder : per }));
-  } else if (payload.split === 'custom') {
-    if (!Array.isArray(payload.shares) || payload.shares.length === 0) {
-      const err = new Error('Shares required for custom split');
-      err.status = 400;
-      err.code = 'SHARES_REQUIRED';
-      throw err;
-    }
-    let total = 0;
-    for (const s of payload.shares) {
-      if (!memberSet.has(String(s.userId))) {
-        const err = new Error('Share user must be a group member');
-        err.status = 400;
-        err.code = 'SHARE_USER_NOT_IN_GROUP';
-        throw err;
-      }
-      total += Number(s.amount || 0);
-    }
-    total = Number(total.toFixed(2));
-    if (total !== Number(amount.toFixed(2))) {
-      const err = new Error('Shares must sum to amount');
-      err.status = 400;
-      err.code = 'SHARES_MISMATCH';
-      throw err;
-    }
-    shares = payload.shares.map((s) => ({ userId: new mongoose.Types.ObjectId(s.userId), amount: Number(s.amount) }));
-  } else {
-    const err = new Error('Invalid split type');
-    err.status = 400;
-    err.code = 'INVALID_SPLIT';
-    throw err;
-  }
+  const shares = normalizeSharesForSplit(payload.split, amount, members, payload.shares || []);
 
   let receiptUrl;
   if (payload.receiptBase64) {
@@ -109,9 +151,32 @@ async function createExpense(user, payload) {
     shares,
     notes: payload.notes || '',
     receiptUrl,
+    recurring: payload.recurring ? {
+      enabled: Boolean(payload.recurring.enabled),
+      frequency: payload.recurring.frequency,
+      dayOfMonth: payload.recurring.dayOfMonth,
+      intervalWeeks: payload.recurring.intervalWeeks,
+      nextRunAt: payload.recurring.enabled ? computeNextRunAt(payload.recurring) : undefined,
+    } : undefined,
   });
 
   return expense.toJSON();
+}
+
+function computeNextRunAt(rec) {
+  const now = new Date();
+  if (rec.frequency === 'monthly') {
+    const d = new Date(now);
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(Math.min(rec.dayOfMonth || 1, 28));
+    return d;
+  }
+  if (rec.frequency === 'weekly') {
+    const d = new Date(now);
+    d.setDate(d.getDate() + 7 * (rec.intervalWeeks || 1));
+    return d;
+  }
+  return undefined;
 }
 
 async function getBalances(user, query = {}) {
@@ -131,7 +196,7 @@ async function getBalances(user, query = {}) {
     }
   }
 
-  const balances = Array.from(balanceMap.entries()).map(([userId, amount]) => ({ userId, amount: Number(amount.toFixed(2)) }));
+  const balances = Array.from(balanceMap.entries()).map(([userId, amount]) => ({ userId, amount: Number(Number(amount).toFixed(2)) }));
   return balances;
 }
 

@@ -1,6 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import useAuthStore from '../../state/useAuthStore';
+import UTText from '../../components/UTText';
+import UTInput from '../../components/UTInput';
+import UTButton from '../../components/UTButton';
+import { colors, spacing } from '../../styles/theme';
 
 export default function LoginScreen({ navigation }) {
   const { login } = useAuthStore();
@@ -18,24 +22,15 @@ export default function LoginScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>RoomSync UT</Text>
-      <TextInput style={styles.input} placeholder="Email" autoCapitalize="none" value={email} onChangeText={setEmail} />
-      <TextInput style={styles.input} placeholder="Password" secureTextEntry value={password} onChangeText={setPassword} />
-      <TouchableOpacity style={styles.button} onPress={onSubmit}>
-        <Text style={styles.buttonText}>Login</Text>
-      </TouchableOpacity>
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.link}>Create account</Text>
-      </TouchableOpacity>
+      <UTText variant="title" style={{ color: colors.burntOrange, textAlign: 'center', marginBottom: spacing.lg }}>RoomSync UT</UTText>
+      <UTInput label="EMAIL" placeholder="you@utexas.edu" autoCapitalize="none" value={email} onChangeText={setEmail} style={{ marginBottom: spacing.md }} />
+      <UTInput label="PASSWORD" placeholder="••••••••" secureTextEntry value={password} onChangeText={setPassword} style={{ marginBottom: spacing.md }} />
+      <UTButton title="Login" onPress={onSubmit} style={{ marginTop: spacing.sm }} />
+      <UTButton title="Create account" variant="secondary" onPress={() => navigation.navigate('Register')} style={{ marginTop: spacing.sm }} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#fff' },
-  title: { fontSize: 28, color: '#BF5700', marginBottom: 24, fontFamily: 'Poppins_600SemiBold', textAlign: 'center' },
-  input: { borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 12, padding: 12, marginBottom: 12 },
-  button: { backgroundColor: '#BF5700', borderRadius: 12, padding: 14, alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 6 },
-  buttonText: { color: '#fff', fontFamily: 'Poppins_600SemiBold' },
-  link: { color: '#BF5700', marginTop: 12, textAlign: 'center' }
+  container: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#F8F8F8' },
 }); 

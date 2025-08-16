@@ -25,15 +25,28 @@ router.get('/', authRequired, async (req, res, next) => {
 
 router.post('/', authRequired, async (req, res, next) => {
   try {
-    const share = Joi.object({ userId: Joi.string().required(), amount: Joi.number().min(0).required() });
+    const shareAmount = Joi.object({ userId: Joi.string().required(), amount: Joi.number().min(0).required() });
+    const sharePercent = Joi.object({ userId: Joi.string().required(), percent: Joi.number().min(0).max(100).required() });
+    const shareShares = Joi.object({ userId: Joi.string().required(), shares: Joi.number().min(0).required() });
     const schema = Joi.object({
       groupId: Joi.string().optional(),
       payerId: Joi.string().optional(),
       amount: Joi.number().positive().required(),
-      split: Joi.string().valid('equal', 'custom').required(),
-      shares: Joi.array().items(share).when('split', { is: 'custom', then: Joi.required() }),
+      split: Joi.string().valid('equal', 'custom', 'unequal', 'percent', 'shares').required(),
+      shares: Joi.alternatives().conditional('split', [
+        { is: Joi.valid('custom', 'unequal'), then: Joi.array().items(shareAmount).required() },
+        { is: 'percent', then: Joi.array().items(sharePercent).required() },
+        { is: 'shares', then: Joi.array().items(shareShares).required() },
+        { is: 'equal', then: Joi.forbidden() },
+      ]),
       notes: Joi.string().allow('').optional(),
       receiptBase64: Joi.string().base64({ paddingRequired: false }).optional(),
+      recurring: Joi.object({
+        enabled: Joi.boolean().required(),
+        frequency: Joi.string().valid('weekly', 'monthly', 'custom').required(),
+        dayOfMonth: Joi.number().min(1).max(28).optional(),
+        intervalWeeks: Joi.number().min(1).max(12).optional(),
+      }).optional(),
     });
     const { error, value } = schema.validate(req.body);
     if (error) {
@@ -97,6 +110,20 @@ router.post('/settle', authRequired, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+
+router.get('/settle/deeplink', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.object({ provider: Joi.string().valid('venmo', 'paypal', 'cashapp').required(), to: Joi.string().required(), amount: Joi.number().positive().required(), note: Joi.string().allow('').default('RoomSync settle-up') });
+    const { error, value } = schema.validate(req.query || {});
+    if (error) { const err = new Error('Invalid input'); err.status = 400; err.code = 'VALIDATION_ERROR'; err.details = error.details.map((d) => d.message); throw err; }
+    const { provider, to, amount, note } = value;
+    let url = '';
+    if (provider === 'venmo') url = `venmo://paycharge?txn=pay&recipients=${encodeURIComponent(to)}&amount=${encodeURIComponent(amount)}&note=${encodeURIComponent(note)}`;
+    if (provider === 'paypal') url = `https://www.paypal.me/${encodeURIComponent(to)}/${encodeURIComponent(amount)}?note=${encodeURIComponent(note)}`;
+    if (provider === 'cashapp') url = `cashapp://payment?recipient=${encodeURIComponent(to)}&amount=${encodeURIComponent(amount)}&note=${encodeURIComponent(note)}`;
+    return res.success({ url });
+  } catch (e) { next(e); }
 });
 
 module.exports = router; 

@@ -1,5 +1,6 @@
 const Rating = require('../models/Rating');
 const { uploadBase64ToCloudinary } = require('./cloudinaryService');
+const { loadEnv } = require('../config/env');
 
 async function getAverageByPlace(placeId) {
   const result = await Rating.aggregate([
@@ -15,12 +16,32 @@ async function listByPlace(placeId) {
   return ratings.map((r) => r.toJSON());
 }
 
-async function listFiltered({ kind, q } = {}) {
+function distanceKm(a, b) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const R = 6371;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lng - a.lng);
+  const la1 = toRad(a.lat);
+  const la2 = toRad(b.lat);
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLon / 2) ** 2;
+  const y = 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+  return R * y;
+}
+
+async function listFiltered({ kind, q, sort, lat, lng } = {}) {
   const filter = {};
   if (kind) filter.kind = kind;
   if (q) filter.placeName = { $regex: q, $options: 'i' };
   const ratings = await Rating.find(filter).sort({ createdAt: -1 }).limit(200);
-  return ratings.map((r) => r.toJSON());
+  let mapped = ratings.map((r) => r.toJSON());
+  if (lat !== undefined && lng !== undefined) {
+    const origin = { lat: Number(lat), lng: Number(lng) };
+    mapped = mapped.map((r) => ({ ...r, distanceKm: r.loc?.lat && r.loc?.lng ? distanceKm(origin, { lat: r.loc.lat, lng: r.loc.lng }) : null }));
+  }
+  if (sort === 'rating_desc') mapped.sort((a, b) => (b.stars || 0) - (a.stars || 0));
+  if (sort === 'rating_asc') mapped.sort((a, b) => (a.stars || 0) - (b.stars || 0));
+  if (sort === 'distance_asc') mapped.sort((a, b) => (a.distanceKm || Infinity) - (b.distanceKm || Infinity));
+  return mapped;
 }
 
 async function createRating(user, payload) {
@@ -97,4 +118,9 @@ async function deleteRating(user, id) {
   return { id };
 }
 
-module.exports = { getAverageByPlace, listByPlace, createRating, updateRating, deleteRating, listFiltered }; 
+function generatePlaceDeeplink(placeId) {
+  const { APP_SCHEME, DEEP_LINK_HOST } = loadEnv();
+  return { deep: `${APP_SCHEME}://place?placeId=${encodeURIComponent(placeId)}`, universal: `https://${DEEP_LINK_HOST}/place/${encodeURIComponent(placeId)}` };
+}
+
+module.exports = { getAverageByPlace, listByPlace, createRating, updateRating, deleteRating, listFiltered, generatePlaceDeeplink }; 

@@ -12,6 +12,8 @@ const ratingsRoutes = require('./ratings');
 const { authRequired } = require('../middlewares/auth');
 const { getBalances } = require('../services/expenseService');
 const Joi = require('joi');
+const hangoutsRoutes = require('./hangouts');
+const moderationRoutes = require('./moderation');
 
 const router = Router();
 
@@ -25,6 +27,8 @@ router.use('/expenses', expensesRoutes);
 router.use('/inventory', inventoryRoutes);
 router.use('/listings', listingsRoutes);
 router.use('/ratings', ratingsRoutes);
+router.use('/hangouts', hangoutsRoutes);
+router.use('/moderation', moderationRoutes);
 
 // Spec requires GET /balances as computed summary
 router.get('/balances', authRequired, async (req, res, next) => {

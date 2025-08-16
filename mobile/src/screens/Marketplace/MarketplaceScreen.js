@@ -1,8 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import useListingStore from '../../state/useListingStore';
 import * as ImagePicker from 'expo-image-picker';
 import api from '../../api/client';
+import UTText from '../../components/UTText';
+import UTInput from '../../components/UTInput';
+import UTCard from '../../components/UTCard';
+import UTButton from '../../components/UTButton';
+import SkeletonList from '../../components/SkeletonList';
+import EmptyState from '../../components/EmptyState';
+import FadeSlideIn from '../../components/FadeSlideIn';
+import PressableScale from '../../components/PressableScale';
+import { spacing, colors } from '../../styles/theme';
 
 export default function MarketplaceScreen({ navigation }) {
   const { items, loading, filters, setFilters, fetch } = useListingStore();
@@ -37,46 +46,49 @@ export default function MarketplaceScreen({ navigation }) {
     finally { setCreating(false); }
   };
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('ListingDetail', { listing: item })}>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.sub}>{item.type} · ${item.price}</Text>
-      <Text style={styles.text} numberOfLines={2}>{item.description}</Text>
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-        <TouchableOpacity style={styles.fav} onPress={() => onFavorite(item.id, true)}><Text style={styles.favText}>Favorite</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.fav} onPress={() => onFavorite(item.id, false)}><Text style={styles.favText}>Unfavorite</Text></TouchableOpacity>
-      </View>
-    </TouchableOpacity>
+  const renderItem = ({ item, index }) => (
+    <FadeSlideIn delay={index * 40}>
+      <UTCard style={{ marginBottom: spacing.md }}>
+        <View style={{ flexDirection: 'row', gap: spacing.md }}>
+          {item.photos?.[0] ? (
+            <Image source={{ uri: item.photos[0] }} style={{ width: 80, height: 80, borderRadius: 12 }} />
+          ) : null}
+          <View style={{ flex: 1 }}>
+            <UTText variant="subtitle">{item.title}</UTText>
+            <UTText variant="meta">${item.price?.toFixed(2) || '—'}</UTText>
+            <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm }}>
+              <UTButton title="Favorite" onPress={() => onFavorite(item.id, true)} style={{ flex: 1 }} />
+              <UTButton title="Unfavorite" variant="secondary" onPress={() => onFavorite(item.id, false)} style={{ flex: 1 }} />
+              <UTButton title="View" variant="secondary" onPress={() => navigation.navigate('ListingDetail', { listing: item })} style={{ flex: 1 }} />
+            </View>
+          </View>
+        </View>
+      </UTCard>
+    </FadeSlideIn>
   );
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Marketplace</Text>
-      <View style={styles.filters}>
-        <TextInput style={styles.input} placeholder="Type (sublet|furniture)" value={filters.type} onChangeText={(v) => setFilters({ type: v })} />
-        <TextInput style={styles.input} placeholder="Search" value={filters.q} onChangeText={(v) => setFilters({ q: v })} />
-        <TextInput style={styles.input} placeholder="Min" keyboardType="number-pad" value={String(filters.min)} onChangeText={(v) => setFilters({ min: v })} />
-        <TextInput style={styles.input} placeholder="Max" keyboardType="number-pad" value={String(filters.max)} onChangeText={(v) => setFilters({ max: v })} />
+      <UTText variant="title" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>Marketplace</UTText>
+      <View style={styles.filters}> 
+        <UTInput placeholder="Type (sublet|furniture)" value={filters.type} onChangeText={(v) => setFilters({ type: v })} style={{ flex: 1 }} />
+        <UTInput placeholder="Search" value={filters.q} onChangeText={(v) => setFilters({ q: v })} style={{ flex: 1 }} />
       </View>
-      <FlatList data={items} keyExtractor={(i) => i.id} renderItem={renderItem} refreshing={loading} onRefresh={fetch} />
-      <TouchableOpacity style={styles.add} onPress={createListing} disabled={creating}>
-        <Text style={styles.addText}>+ Add Listing</Text>
-      </TouchableOpacity>
+      {loading ? (
+        <SkeletonList />
+      ) : !items?.length ? (
+        <EmptyState title="No listings" subtitle="Create the first listing." />
+      ) : (
+        <FlatList data={items} keyExtractor={(i) => i.id} renderItem={renderItem} refreshing={loading} onRefresh={fetch} />
+      )}
+      <PressableScale onPress={createListing}>
+        <UTButton title="+ Add Listing" onPress={createListing} style={{ marginTop: spacing.md }} />
+      </PressableScale>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  header: { fontSize: 22, color: '#BF5700', fontFamily: 'Poppins_600SemiBold', marginBottom: 8 },
-  filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  input: { flexGrow: 1, borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 12, padding: 10, minWidth: 120 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#F2D388' },
-  title: { fontFamily: 'Poppins_600SemiBold', color: '#222' },
-  sub: { fontFamily: 'Poppins_400Regular', color: '#666', marginTop: 4 },
-  text: { fontFamily: 'Poppins_400Regular', color: '#444', marginTop: 6 },
-  fav: { backgroundColor: '#BF5700', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  favText: { color: '#fff', fontFamily: 'Poppins_600SemiBold' },
-  add: { marginTop: 8, backgroundColor: '#BF5700', padding: 14, borderRadius: 12, alignItems: 'center' },
-  addText: { color: '#fff', fontFamily: 'Poppins_600SemiBold' }
+  container: { flex: 1, padding: spacing.lg, backgroundColor: '#F8F8F8' },
+  filters: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md },
 }); 

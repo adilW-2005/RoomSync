@@ -1,8 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking, Alert, Image } from 'react-native';
+import { View, StyleSheet, FlatList, Linking, Alert, Image } from 'react-native';
 import useExpenseStore from '../../state/useExpenseStore';
 import AddExpenseModal from './AddExpenseModal';
 import useMemberStore from '../../state/useMemberStore';
+import UTText from '../../components/UTText';
+import UTCard from '../../components/UTCard';
+import UTButton from '../../components/UTButton';
+import SkeletonList from '../../components/SkeletonList';
+import EmptyState from '../../components/EmptyState';
+import FadeSlideIn from '../../components/FadeSlideIn';
+import { spacing, colors } from '../../styles/theme';
 
 export default function ExpensesScreen() {
   const { balances, expenses, fetchBalances, fetchExpenses, createExpense } = useExpenseStore();
@@ -32,47 +39,45 @@ export default function ExpensesScreen() {
     } catch (e) { Alert.alert('Export failed', 'Could not open CSV'); }
   };
 
+  const renderExpense = ({ item, index }) => (
+    <FadeSlideIn delay={index * 40}>
+      <UTCard style={{ marginBottom: spacing.md }}>
+        <UTText variant="subtitle" style={{ marginBottom: spacing.xs }}>{membersById[item.payerId] || item.payerId}</UTText>
+        <UTText variant="meta">${item.amount.toFixed(2)} {item.notes ? `• ${item.notes}` : ''}</UTText>
+        {item.receiptUrl ? (
+          <Image source={{ uri: item.receiptUrl }} style={{ width: 80, height: 80, borderRadius: 8, marginTop: spacing.xs }} />
+        ) : null}
+      </UTCard>
+    </FadeSlideIn>
+  );
+
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Balances</Text>
-      <FlatList
-        data={balances}
-        keyExtractor={(i) => i.userId}
-        renderItem={({ item }) => (
-          <View style={styles.row}>
-            <Text style={styles.user}>{membersById[item.userId] || item.userId}</Text>
-            <Text style={[styles.amount, item.amount < 0 ? styles.negative : styles.positive]}>
-              {item.amount.toFixed(2)}
-            </Text>
-          </View>
+      <UTText variant="title" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>Balances</UTText>
+      <UTCard style={{ marginBottom: spacing.md }}>
+        {balances?.length ? (
+          balances.map((b) => (
+            <View key={b.userId} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs }}>
+              <UTText variant="body">{membersById[b.userId] || b.userId}</UTText>
+              <UTText variant="body" style={{ color: b.amount < 0 ? '#e74c3c' : '#2ecc71' }}>{b.amount.toFixed(2)}</UTText>
+            </View>
+          ))
+        ) : (
+          <EmptyState title="All settled" subtitle="No outstanding balances." />
         )}
-      />
+      </UTCard>
 
-      <View style={styles.actionsRow}>
-        <TouchableOpacity style={styles.button} onPress={() => setModal(true)}>
-          <Text style={styles.buttonText}>Add Expense</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButton} onPress={onExportCsv}>
-          <Text style={styles.secondaryButtonText}>Export CSV</Text>
-        </TouchableOpacity>
+      <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
+        <UTButton title="Add Expense" onPress={() => setModal(true)} style={{ flex: 1 }} />
+        <UTButton title="Export CSV" variant="secondary" onPress={onExportCsv} style={{ flex: 1 }} />
       </View>
 
-      <Text style={[styles.header, { marginTop: 16 }]}>History</Text>
-      <FlatList
-        data={expenses}
-        keyExtractor={(i) => i.id}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.user}>{membersById[item.payerId] || item.payerId}</Text>
-            <Text style={styles.amountRow}>${item.amount.toFixed(2)} {item.notes ? `• ${item.notes}` : ''}</Text>
-            {item.receiptUrl ? (
-              <Image source={{ uri: item.receiptUrl }} style={styles.receipt} />
-            ) : null}
-          </View>
-        )}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-      />
+      <UTText variant="title" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>History</UTText>
+      {expenses?.length ? (
+        <FlatList data={expenses} keyExtractor={(i) => i.id} renderItem={renderExpense} onEndReached={loadMore} onEndReachedThreshold={0.5} />
+      ) : (
+        <EmptyState title="No expenses yet" subtitle="Add your first expense." />
+      )}
 
       <AddExpenseModal visible={modal} onClose={() => setModal(false)} onCreate={onCreate} />
     </View>
@@ -80,19 +85,5 @@ export default function ExpensesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  header: { fontSize: 22, color: '#BF5700', fontFamily: 'Poppins_600SemiBold', marginBottom: 8 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  user: { fontFamily: 'Poppins_400Regular', color: '#222' },
-  amount: { fontFamily: 'Poppins_600SemiBold' },
-  amountRow: { fontFamily: 'Poppins_600SemiBold', color: '#222', marginTop: 4 },
-  positive: { color: '#2ecc71' },
-  negative: { color: '#e74c3c' },
-  button: { backgroundColor: '#BF5700', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 16, flex: 1 },
-  buttonText: { color: '#fff', fontFamily: 'Poppins_600SemiBold' },
-  secondaryButton: { backgroundColor: '#F2D388', borderRadius: 12, padding: 14, alignItems: 'center', marginTop: 16, marginLeft: 8 },
-  secondaryButtonText: { color: '#333', fontFamily: 'Poppins_600SemiBold' },
-  actionsRow: { flexDirection: 'row' },
-  card: { backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#eee' },
-  receipt: { width: 80, height: 80, borderRadius: 8, marginTop: 8 },
+  container: { flex: 1, padding: spacing.lg, backgroundColor: '#F8F8F8' },
 }); 

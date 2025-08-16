@@ -18,6 +18,8 @@ async function listInventory(user, query = {}) {
   const groupId = query.groupId || getCurrentGroupIdForUser(user);
   const filter = { groupId };
   if (query.q) filter.name = { $regex: query.q, $options: 'i' };
+  if (query.category) filter.categories = { $in: [query.category] };
+  if (query.tag) filter.tags = { $in: [query.tag] };
   const items = await Inventory.find(filter).sort({ createdAt: -1 });
   return items.map((i) => i.toJSON());
 }
@@ -50,6 +52,9 @@ async function createInventory(user, payload) {
     qty: Number(payload.qty),
     shared: Boolean(payload.shared),
     expiresAt: payload.expiresAt ? new Date(payload.expiresAt) : undefined,
+    lowStockThreshold: Number(payload.lowStockThreshold || 0),
+    categories: Array.isArray(payload.categories) ? payload.categories : [],
+    tags: Array.isArray(payload.tags) ? payload.tags : [],
     photoUrl,
   });
   return item.toJSON();
@@ -70,11 +75,13 @@ async function updateInventory(user, id, updates) {
     err.code = 'FORBIDDEN';
     throw err;
   }
-  const allowed = ['name', 'qty', 'shared', 'expiresAt'];
+  const allowed = ['name', 'qty', 'shared', 'expiresAt', 'lowStockThreshold', 'categories', 'tags'];
   for (const key of allowed) {
     if (updates[key] !== undefined) {
       if (key === 'qty') item.qty = Number(updates.qty);
       else if (key === 'expiresAt') item.expiresAt = updates.expiresAt ? new Date(updates.expiresAt) : undefined;
+      else if (key === 'categories') item.categories = Array.isArray(updates.categories) ? updates.categories : [];
+      else if (key === 'tags') item.tags = Array.isArray(updates.tags) ? updates.tags : [];
       else item[key] = updates[key];
     }
   }
@@ -104,4 +111,33 @@ async function deleteInventory(user, id) {
   return { id };
 }
 
-module.exports = { listInventory, createInventory, updateInventory, deleteInventory }; 
+async function getAlerts(user, query = {}) {
+  const groupId = query.groupId || getCurrentGroupIdForUser(user);
+  const now = new Date();
+  const items = await Inventory.find({ groupId });
+  const low = items.filter((i) => Number(i.qty) <= Number(i.lowStockThreshold || 0));
+  const expiring = items.filter((i) => i.expiresAt && new Date(i.expiresAt).getTime() - now.getTime() < 3 * 24 * 60 * 60 * 1000);
+  return { low: low.map((i) => i.toJSON()), expiring: expiring.map((i) => i.toJSON()) };
+}
+
+async function exportShoppingList(user, { groupId, format = 'text' } = {}) {
+  const alerts = await getAlerts(user, { groupId });
+  if (format === 'csv') {
+    const rows = [['name', 'qty', 'expiresAt'], ...alerts.low.map((i) => [i.name, i.qty, i.expiresAt || '']), ...alerts.expiring.map((i) => [i.name, i.qty, i.expiresAt || ''])];
+    return rows.map((r) => r.join(',')).join('\n');
+  }
+  // text
+  const lines = [];
+  if (alerts.low.length) {
+    lines.push('Low stock:');
+    for (const i of alerts.low) lines.push(`- ${i.name} (qty ${i.qty})`);
+  }
+  if (alerts.expiring.length) {
+    if (lines.length) lines.push('');
+    lines.push('Expiring soon:');
+    for (const i of alerts.expiring) lines.push(`- ${i.name} (${i.expiresAt ? new Date(i.expiresAt).toDateString() : ''})`);
+  }
+  return lines.join('\n');
+}
+
+module.exports = { listInventory, createInventory, updateInventory, deleteInventory, getAlerts, exportShoppingList }; 

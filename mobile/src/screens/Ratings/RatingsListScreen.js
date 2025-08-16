@@ -1,7 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
 import utPlaces from '../../assets/ut_places.json';
 import api from '../../api/client';
+import UTText from '../../components/UTText';
+import UTCard from '../../components/UTCard';
+import FadeSlideIn from '../../components/FadeSlideIn';
+import RatingStars from '../../components/RatingStars';
+import { spacing, colors } from '../../styles/theme';
 
 export default function RatingsListScreen({ navigation }) {
   const [avgMap, setAvgMap] = useState({});
@@ -30,24 +35,32 @@ export default function RatingsListScreen({ navigation }) {
     return matchesKind && matchesQ;
   });
 
-  const renderItem = ({ item }) => {
+  const renderItem = ({ item, index }) => {
     const avg = avgMap[item.placeId]?.avg;
     const count = avgMap[item.placeId]?.count || 0;
     return (
-      <TouchableOpacity style={styles.card} onPress={() => navigation.navigate('RatingsDetail', { place: item })}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.title}>{item.placeName}</Text>
-          <Text style={styles.sub}>Avg: {avg != null ? avg.toFixed(2) : 'N/A'} ({count})</Text>
-        </View>
-        <Text style={styles.chevron}>›</Text>
-      </TouchableOpacity>
+      <FadeSlideIn delay={index * 40}>
+        <TouchableOpacity onPress={() => navigation.navigate('RatingsDetail', { place: item })}>
+          <UTCard style={{ marginBottom: spacing.md }}>
+            <UTText variant="subtitle" style={{ marginBottom: 4 }}>{item.placeName}</UTText>
+            {avg != null ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <RatingStars value={avg} />
+                <UTText variant="meta" style={{ marginLeft: 6 }}>{avg.toFixed(2)} ({count})</UTText>
+              </View>
+            ) : (
+              <UTText variant="meta">Avg: N/A ({count})</UTText>
+            )}
+          </UTCard>
+        </TouchableOpacity>
+      </FadeSlideIn>
     );
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>UT Housing Ratings</Text>
-      <View style={styles.filters}>
+      <UTText variant="title" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>UT Housing Ratings</UTText>
+      <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
         <TextInput style={styles.input} placeholder="Kind (apartment|dorm)" value={kind} onChangeText={setKind} />
         <TextInput style={styles.input} placeholder="Search name" value={q} onChangeText={setQ} />
       </View>
@@ -57,12 +70,6 @@ export default function RatingsListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  header: { fontSize: 22, color: '#BF5700', fontFamily: 'Poppins_600SemiBold', marginBottom: 8 },
-  filters: { flexDirection: 'row', gap: 8, marginBottom: 8 },
+  container: { flex: 1, padding: spacing.lg, backgroundColor: '#F8F8F8' },
   input: { flex: 1, borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 12, padding: 10 },
-  card: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, borderWidth: 1, borderColor: '#F2D388' },
-  title: { fontFamily: 'Poppins_600SemiBold', color: '#222' },
-  sub: { fontFamily: 'Poppins_400Regular', color: '#666', marginTop: 4 },
-  chevron: { fontSize: 24, color: '#BF5700', paddingLeft: 8 }
 }); 

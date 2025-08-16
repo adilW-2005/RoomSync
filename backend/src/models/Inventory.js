@@ -8,6 +8,9 @@ const inventorySchema = new mongoose.Schema({
   qty: { type: Number, required: true, min: 0 },
   shared: { type: Boolean, default: false },
   expiresAt: { type: Date },
+  lowStockThreshold: { type: Number, default: 0 },
+  categories: [{ type: String, index: true }],
+  tags: [{ type: String, index: true }],
   photoUrl: { type: String },
   createdAt: { type: Date, default: Date.now },
 });

@@ -6,6 +6,7 @@ const STORAGE_KEY = 'roomsync_group';
 
 const useGroupStore = create((set, get) => ({
   currentGroup: null,
+  groups: [],
   hydrated: false,
   async hydrate() {
     try {
@@ -18,6 +19,17 @@ const useGroupStore = create((set, get) => ({
       set({ hydrated: true });
     }
   },
+  async listGroups() {
+    const groups = await api.get('/groups');
+    set({ groups });
+    return groups;
+  },
+  async switchGroup(groupId) {
+    const group = await api.post('/groups/switch', { groupId });
+    set({ currentGroup: group });
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(group));
+    return group;
+  },
   async createGroup(name) {
     const group = await api.post('/groups', { name });
     set({ currentGroup: group });
@@ -26,6 +38,12 @@ const useGroupStore = create((set, get) => ({
   },
   async joinGroup(code) {
     const group = await api.post('/groups/join', { code });
+    set({ currentGroup: group });
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(group));
+    return group;
+  },
+  async joinByInvite(inviteCode) {
+    const group = await api.post('/groups/join/invite', { inviteCode });
     set({ currentGroup: group });
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(group));
     return group;
@@ -53,6 +71,15 @@ const useGroupStore = create((set, get) => ({
     set({ currentGroup: group });
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(group));
     return group;
+  },
+  async createInvite(opts) {
+    return api.post('/groups/current/invites', opts || {});
+  },
+  async listInvites() {
+    return api.get('/groups/current/invites');
+  },
+  async revokeInvite(code) {
+    return api.post('/groups/current/invites/revoke', { code });
   }
 }));
 

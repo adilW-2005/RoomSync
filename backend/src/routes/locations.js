@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const Joi = require('joi');
 const { authRequired } = require('../middlewares/auth');
-const { getGroupPresence, updatePresence } = require('../presence');
+const { getGroupPresence, updatePresence, setHomeGeofence } = require('../presence');
 
 const router = Router();
 
@@ -10,6 +10,7 @@ const beaconSchema = Joi.object({
   lat: Joi.number().required(),
   lng: Joi.number().required(),
   battery: Joi.number().min(0).max(100).optional(),
+  shareMinutes: Joi.number().integer().min(1).max(24 * 60).optional(),
 });
 
 router.post('/beacon', authRequired, async (req, res, next) => {
@@ -22,8 +23,9 @@ router.post('/beacon', authRequired, async (req, res, next) => {
       err.details = error.details.map(d => d.message);
       throw err;
     }
+    const shareUntil = value.shareMinutes ? new Date(Date.now() + value.shareMinutes * 60 * 1000) : undefined;
     // Update presence registry
-    updatePresence(value.groupId, req.user._id, value.lat, value.lng, new Date(), value.battery);
+    updatePresence(value.groupId, req.user._id, value.lat, value.lng, new Date(), value.battery, shareUntil);
 
     // Broadcast over socket for same group (optional)
     const { tryGetIO } = require('../socket');
@@ -35,10 +37,45 @@ router.post('/beacon', authRequired, async (req, res, next) => {
         lat: value.lat,
         lng: value.lng,
         battery: value.battery,
+        shareUntil: shareUntil ? shareUntil.toISOString() : undefined,
         updatedAt: new Date().toISOString(),
       });
     }
     return res.success({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.post('/share/stop', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.object({ groupId: Joi.string().required() });
+    const { error, value } = schema.validate(req.body || {});
+    if (error) {
+      const err = new Error('Invalid input');
+      err.status = 400;
+      err.code = 'VALIDATION_ERROR';
+      err.details = error.details.map(d => d.message);
+      throw err;
+    }
+    updatePresence(value.groupId, req.user._id, 0, 0, new Date(), undefined, new Date(Date.now() - 1000));
+    return res.success({ ok: true });
+  } catch (e) { next(e); }
+});
+
+router.post('/home', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.object({ groupId: Joi.string().required(), lat: Joi.number().required(), lng: Joi.number().required(), radiusMeters: Joi.number().min(10).max(1000).default(50) });
+    const { error, value } = schema.validate(req.body);
+    if (error) {
+      const err = new Error('Invalid input');
+      err.status = 400;
+      err.code = 'VALIDATION_ERROR';
+      err.details = error.details.map((d) => d.message);
+      throw err;
+    }
+    const home = setHomeGeofence(value.groupId, value);
+    return res.success(home);
   } catch (e) {
     next(e);
   }

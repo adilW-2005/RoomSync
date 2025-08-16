@@ -8,7 +8,8 @@ const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
   name: Joi.string().min(1).required(),
-  avatarBase64: Joi.string().base64({ paddingRequired: false }).optional()
+  avatarBase64: Joi.string().base64({ paddingRequired: false }).optional(),
+  username: Joi.string().trim().lowercase().min(3).max(20).regex(/^[a-z0-9_.]+$/).optional(),
 });
 
 router.post('/register', async (req, res, next) => {

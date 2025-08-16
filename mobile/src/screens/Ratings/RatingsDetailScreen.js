@@ -1,8 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
 import api from '../../api/client';
 import * as ImagePicker from 'expo-image-picker';
 import useAuthStore from '../../state/useAuthStore';
+import UTText from '../../components/UTText';
+import UTCard from '../../components/UTCard';
+import UTButton from '../../components/UTButton';
+import { spacing, colors } from '../../styles/theme';
 
 export default function RatingsDetailScreen({ route }) {
   const { place } = route.params;
@@ -49,37 +53,37 @@ export default function RatingsDetailScreen({ route }) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>{place.placeName}</Text>
+      <UTText variant="title" style={{ color: colors.burntOrange, padding: spacing.md }}>{place.placeName}</UTText>
       <FlatList
-        style={{ flex: 1 }}
+        style={{ flex: 1, paddingHorizontal: spacing.lg }}
         data={items}
         keyExtractor={(i) => i.id}
         renderItem={({ item }) => (
-          <View style={styles.card}>
-            <Text style={styles.title}>{'★'.repeat(item.stars)}{'☆'.repeat(5 - item.stars)}</Text>
-            {item.tips ? <Text style={styles.text}>{item.tips}</Text> : null}
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+          <UTCard style={{ marginBottom: spacing.md }}>
+            <UTText variant="subtitle">{'★'.repeat(item.stars)}{'☆'.repeat(5 - item.stars)}</UTText>
+            {item.tips ? <UTText variant="body" style={{ marginTop: spacing.xs }}>{item.tips}</UTText> : null}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm }}>
               {(item.photos || []).map((u) => (
                 <Image key={u} source={{ uri: u }} style={{ width: 64, height: 64, borderRadius: 8 }} />
               ))}
             </View>
             {user?.id === item.authorId ? (
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
-                <TouchableOpacity style={styles.secondary} onPress={() => onDelete(item.id)}><Text style={styles.secondaryText}>Delete</Text></TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm }}>
+                <UTButton title="Delete" variant="secondary" onPress={() => onDelete(item.id)} />
               </View>
             ) : null}
-          </View>
+          </UTCard>
         )}
       />
-      <View style={styles.form}>
-        <Text style={styles.formHeader}>Add Review</Text>
+      <View style={{ borderTopWidth: 1, borderTopColor: '#eee', padding: spacing.lg }}>
+        <UTText variant="subtitle" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>Add Review</UTText>
         <TextInput style={styles.input} placeholder="Stars (1-5)" keyboardType="number-pad" value={stars} onChangeText={setStars} />
         <TextInput style={styles.input} placeholder="Tips (optional)" value={tips} onChangeText={setTips} />
-        <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+        <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center', marginBottom: spacing.md }}>
           {photosBase64.map((u, idx) => (<Image key={idx} source={{ uri: u }} style={{ width: 40, height: 40, borderRadius: 6 }} />))}
-          <TouchableOpacity style={styles.secondary} onPress={pickPhotos}><Text style={styles.secondaryText}>Add Photos</Text></TouchableOpacity>
+          <UTButton title="Add Photos" variant="secondary" onPress={pickPhotos} />
         </View>
-        <TouchableOpacity style={styles.button} onPress={submit}><Text style={styles.buttonText}>Submit</Text></TouchableOpacity>
+        <UTButton title="Submit" onPress={submit} />
       </View>
     </View>
   );
@@ -87,15 +91,5 @@ export default function RatingsDetailScreen({ route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  header: { fontSize: 22, color: '#BF5700', fontFamily: 'Poppins_600SemiBold', padding: 16 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: '#F2D388' },
-  title: { fontFamily: 'Poppins_600SemiBold', color: '#222' },
-  text: { fontFamily: 'Poppins_400Regular', color: '#444', marginTop: 6 },
-  form: { borderTopWidth: 1, borderTopColor: '#eee', padding: 16 },
-  formHeader: { fontFamily: 'Poppins_600SemiBold', color: '#BF5700', marginBottom: 8 },
   input: { borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 12, padding: 12, marginBottom: 12 },
-  button: { backgroundColor: '#BF5700', padding: 12, borderRadius: 12, alignItems: 'center' },
-  buttonText: { color: '#fff', fontFamily: 'Poppins_600SemiBold' },
-  secondary: { backgroundColor: '#E5E5EA', padding: 10, borderRadius: 10 },
-  secondaryText: { color: '#222', fontFamily: 'Poppins_600SemiBold' }
 }); 

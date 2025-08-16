@@ -1,10 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import { View, StyleSheet, FlatList, Modal, Alert } from 'react-native';
 import useEventStore from '../../state/useEventStore';
 import { scheduleEventReminder, scheduleEventReminderOneHour } from '../../lib/notifications';
 import MapView, { Marker } from 'react-native-maps';
 import EmptyState from '../../components/EmptyState';
 import SkeletonList from '../../components/SkeletonList';
+import UTText from '../../components/UTText';
+import UTInput from '../../components/UTInput';
+import UTCard from '../../components/UTCard';
+import UTButton from '../../components/UTButton';
+import FadeSlideIn from '../../components/FadeSlideIn';
+import PressableScale from '../../components/PressableScale';
+import { spacing, colors } from '../../styles/theme';
 
 export default function EventsScreen() {
   const { events, fetchEvents, createEvent, loading } = useEventStore();
@@ -43,7 +50,7 @@ export default function EventsScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Events</Text>
+      <UTText variant="title" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>Events</UTText>
       {loading ? (
         <SkeletonList />
       ) : (events || []).length === 0 ? (
@@ -54,41 +61,45 @@ export default function EventsScreen() {
           keyExtractor={(i) => i.id}
           refreshing={loading}
           onRefresh={fetchEvents}
-          renderItem={({ item }) => (
-            <View style={styles.card}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.sub}>{new Date(item.startAt).toLocaleString()} - {new Date(item.endAt).toLocaleString()}</Text>
-              {item.locationText ? <Text style={styles.text}>{item.locationText}</Text> : null}
-              {typeof item.lat === 'number' && typeof item.lng === 'number' ? (
-                <MapView style={styles.map} initialRegion={{ latitude: item.lat, longitude: item.lng, latitudeDelta: 0.002, longitudeDelta: 0.002 }}>
-                  <Marker coordinate={{ latitude: item.lat, longitude: item.lng }} />
-                </MapView>
-              ) : null}
-            </View>
+          renderItem={({ item, index }) => (
+            <FadeSlideIn delay={index * 40}>
+              <UTCard style={{ marginBottom: spacing.md }}>
+                <UTText variant="subtitle">{item.title}</UTText>
+                <UTText variant="meta" style={{ marginTop: 4 }}>{new Date(item.startAt).toLocaleString()} - {new Date(item.endAt).toLocaleString()}</UTText>
+                {item.locationText ? <UTText variant="meta" style={{ marginTop: 6 }}>{item.locationText}</UTText> : null}
+                {typeof item.lat === 'number' && typeof item.lng === 'number' ? (
+                  <MapView style={styles.map} initialRegion={{ latitude: item.lat, longitude: item.lng, latitudeDelta: 0.002, longitudeDelta: 0.002 }}>
+                    <Marker coordinate={{ latitude: item.lat, longitude: item.lng }} />
+                  </MapView>
+                ) : null}
+              </UTCard>
+            </FadeSlideIn>
           )}
         />
       )}
-      <TouchableOpacity style={styles.fab} onPress={() => setModal(true)}>
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+      <PressableScale onPress={() => setModal(true)}>
+        <UTButton title="Add Event" onPress={() => setModal(true)} style={{ marginTop: spacing.md }} />
+      </PressableScale>
 
       <Modal visible={modal} animationType="slide" transparent onRequestClose={() => setModal(false)}>
         <View style={styles.backdrop}>
           <View style={styles.sheet}>
-            <Text style={styles.sheetTitle}>Add Event</Text>
-            <TextInput style={styles.input} placeholder="Title" value={title} onChangeText={setTitle} />
-            <TextInput style={styles.input} placeholder="Start (YYYY-MM-DD HH:mm)" value={start} onChangeText={setStart} />
-            <TextInput style={styles.input} placeholder="End (YYYY-MM-DD HH:mm)" value={end} onChangeText={setEnd} />
-            <TextInput style={styles.input} placeholder="Location (optional)" value={locationText} onChangeText={setLocationText} />
-            <TextInput style={styles.input} placeholder="Lat (optional)" value={lat} onChangeText={setLat} keyboardType="decimal-pad" />
-            <TextInput style={styles.input} placeholder="Lng (optional)" value={lng} onChangeText={setLng} keyboardType="decimal-pad" />
-            <TextInput style={styles.input} placeholder="Repeat (none|daily|weekly|custom)" value={repeat} onChangeText={setRepeat} />
+            <UTText variant="subtitle" style={{ marginBottom: spacing.sm, textAlign: 'center' }}>Add Event</UTText>
+            <UTInput placeholder="Title" value={title} onChangeText={setTitle} style={{ marginBottom: spacing.md }} />
+            <UTInput placeholder="Start (YYYY-MM-DD HH:mm)" value={start} onChangeText={setStart} style={{ marginBottom: spacing.md }} />
+            <UTInput placeholder="End (YYYY-MM-DD HH:mm)" value={end} onChangeText={setEnd} style={{ marginBottom: spacing.md }} />
+            <UTInput placeholder="Location (optional)" value={locationText} onChangeText={setLocationText} style={{ marginBottom: spacing.md }} />
+            <View style={{ flexDirection: 'row', gap: spacing.md }}>
+              <UTInput placeholder="Lat (optional)" value={lat} onChangeText={setLat} keyboardType="decimal-pad" style={{ flex: 1 }} />
+              <UTInput placeholder="Lng (optional)" value={lng} onChangeText={setLng} keyboardType="decimal-pad" style={{ flex: 1 }} />
+            </View>
+            <UTInput placeholder="Repeat (none|daily|weekly|custom)" value={repeat} onChangeText={setRepeat} style={{ marginTop: spacing.md, marginBottom: spacing.md }} />
             {repeat === 'custom' && (
-              <TextInput style={styles.input} placeholder="Custom days (0=Sun..6=Sat, comma-separated)" value={customDays} onChangeText={setCustomDays} />
+              <UTInput placeholder="Custom days (0=Sun..6=Sat, comma-separated)" value={customDays} onChangeText={setCustomDays} style={{ marginBottom: spacing.md }} />
             )}
-            <View style={styles.row}>
-              <TouchableOpacity style={[styles.button, styles.cancel]} onPress={() => setModal(false)}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={submit}><Text style={styles.buttonText}>Create</Text></TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <UTButton title="Cancel" variant="secondary" onPress={() => setModal(false)} style={{ flex: 1, marginRight: spacing.sm }} />
+              <UTButton title="Create" onPress={submit} style={{ flex: 1, marginLeft: spacing.sm }} />
             </View>
           </View>
         </View>
@@ -98,21 +109,8 @@ export default function EventsScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, backgroundColor: '#fff' },
-  header: { fontSize: 22, color: '#BF5700', fontFamily: 'Poppins_600SemiBold', marginBottom: 8 },
-  card: { backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#F2D388' },
-  title: { fontFamily: 'Poppins_600SemiBold', color: '#222' },
-  sub: { fontFamily: 'Poppins_400Regular', color: '#666', marginTop: 4 },
-  text: { fontFamily: 'Poppins_400Regular', color: '#444', marginTop: 6 },
+  container: { flex: 1, padding: spacing.lg, backgroundColor: '#F8F8F8' },
   map: { height: 120, borderRadius: 12, marginTop: 8 },
-  fab: { position: 'absolute', right: 20, bottom: 30, backgroundColor: '#BF5700', width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8 },
-  fabText: { color: '#fff', fontSize: 28, lineHeight: 28, fontFamily: 'Poppins_600SemiBold' },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#fff', padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  sheetTitle: { fontSize: 18, color: '#BF5700', fontFamily: 'Poppins_600SemiBold', marginBottom: 12 },
-  row: { flexDirection: 'row', justifyContent: 'space-between' },
-  button: { backgroundColor: '#BF5700', padding: 12, borderRadius: 12, minWidth: 120, alignItems: 'center' },
-  buttonText: { color: '#fff', fontFamily: 'Poppins_600SemiBold' },
-  cancel: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#BF5700' },
-  cancelText: { color: '#BF5700', fontFamily: 'Poppins_600SemiBold' }
+  sheet: { backgroundColor: '#fff', padding: spacing.lg, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
 }); 

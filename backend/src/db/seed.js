@@ -27,9 +27,11 @@ const Rating = require('../models/Rating');
     email,
     passwordHash: await bcrypt.hash(password, 10),
     name,
+    username: 'alex',
+    showContact: true,
   });
 
-  const group = await Group.create({ name: groupName, code: groupCode, members: [user._id] });
+  const group = await Group.create({ name: groupName, code: groupCode, members: [user._id], memberRoles: [{ user: user._id, role: 'owner' }] });
   await User.updateOne({ _id: user._id }, { $addToSet: { groups: group._id } });
 
   await Chore.deleteMany({ groupId: group._id });

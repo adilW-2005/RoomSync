@@ -1,7 +1,7 @@
 const { Router } = require('express');
 const Joi = require('joi');
 const { authRequired } = require('../middlewares/auth');
-const { getAverageByPlace, listByPlace, createRating, updateRating, deleteRating, listFiltered } = require('../services/ratingService');
+const { getAverageByPlace, listByPlace, createRating, updateRating, deleteRating, listFiltered, generatePlaceDeeplink } = require('../services/ratingService');
 
 const router = Router();
 
@@ -43,7 +43,7 @@ router.get('/by-place', async (req, res, next) => {
 
 router.get('/', async (req, res, next) => {
   try {
-    const schema = Joi.object({ kind: Joi.string().valid('apartment', 'dorm').optional(), q: Joi.string().optional() });
+    const schema = Joi.object({ kind: Joi.string().valid('apartment', 'dorm').optional(), q: Joi.string().optional(), sort: Joi.string().valid('rating_desc', 'rating_asc', 'distance_asc').optional(), lat: Joi.number().optional(), lng: Joi.number().optional() });
     const { error, value } = schema.validate(req.query);
     if (error) {
       const err = new Error('Invalid input');
@@ -54,6 +54,22 @@ router.get('/', async (req, res, next) => {
     }
     const result = await listFiltered(value);
     return res.success(result);
+  } catch (e) { next(e); }
+});
+
+router.get('/deeplink', async (req, res, next) => {
+  try {
+    const schema = Joi.object({ placeId: Joi.string().required() });
+    const { error, value } = schema.validate(req.query);
+    if (error) {
+      const err = new Error('Invalid input');
+      err.status = 400;
+      err.code = 'VALIDATION_ERROR';
+      err.details = error.details.map((d) => d.message);
+      throw err;
+    }
+    const link = generatePlaceDeeplink(value.placeId);
+    return res.success(link);
   } catch (e) { next(e); }
 });
 

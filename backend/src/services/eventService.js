@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const Group = require('../models/Group');
+const { notifyUsers } = require('./notificationService');
 
 function getCurrentGroupIdForUser(user) {
   const groupId = (user.groups || [])[0];
@@ -65,6 +66,7 @@ async function createEvent(user, payload) {
     attendees,
     createdBy: user._id,
   });
+  try { if (attendees.length) await notifyUsers(attendees, 'events', 'New event', payload.title || ''); } catch (_) {}
   return event.toJSON();
 }
 
@@ -109,4 +111,92 @@ async function updateEvent(user, id, updates) {
   return event.toJSON();
 }
 
-module.exports = { listEvents, createEvent, updateEvent }; 
+async function setRsvp(user, eventId, status) {
+  const event = await Event.findById(eventId);
+  if (!event) {
+    const err = new Error('Event not found');
+    err.status = 404;
+    err.code = 'EVENT_NOT_FOUND';
+    throw err;
+  }
+  const userGroups = (user.groups || []).map(String);
+  if (!userGroups.includes(String(event.groupId))) {
+    const err = new Error('Forbidden');
+    err.status = 403;
+    err.code = 'FORBIDDEN';
+    throw err;
+  }
+  const allowed = ['going', 'maybe', 'not'];
+  if (!allowed.includes(status)) {
+    const err = new Error('Invalid RSVP status');
+    err.status = 400;
+    err.code = 'INVALID_RSVP';
+    throw err;
+  }
+  event.rsvps = event.rsvps || [];
+  const idx = event.rsvps.findIndex((r) => String(r.userId) === String(user._id));
+  if (idx >= 0) {
+    event.rsvps[idx].status = status;
+    event.rsvps[idx].at = new Date();
+  } else {
+    event.rsvps.push({ userId: user._id, status, at: new Date() });
+  }
+  await event.save();
+  try { await notifyUsers(event.attendees || [], 'events', 'RSVP update', `${user.name || 'Someone'} is ${status}`); } catch (_) {}
+  return event.toJSON();
+}
+
+async function getAttendeesWithStatus(user, eventId) {
+  const event = await Event.findById(eventId).populate('attendees');
+  if (!event) {
+    const err = new Error('Event not found');
+    err.status = 404;
+    err.code = 'EVENT_NOT_FOUND';
+    throw err;
+  }
+  const userGroups = (user.groups || []).map(String);
+  if (!userGroups.includes(String(event.groupId))) {
+    const err = new Error('Forbidden');
+    err.status = 403;
+    err.code = 'FORBIDDEN';
+    throw err;
+  }
+  const rsvpByUser = new Map((event.rsvps || []).map((r) => [String(r.userId), r.status]));
+  const list = (event.attendees || []).map((u) => ({ id: String(u._id), name: u.name, email: u.email, status: rsvpByUser.get(String(u._id)) || 'maybe' }));
+  return list;
+}
+
+function toICSDate(dt) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const y = dt.getUTCFullYear();
+  const m = pad(dt.getUTCMonth() + 1);
+  const d = pad(dt.getUTCDate());
+  const hh = pad(dt.getUTCHours());
+  const mm = pad(dt.getUTCMinutes());
+  const ss = pad(dt.getUTCSeconds());
+  return `${y}${m}${d}T${hh}${mm}${ss}Z`;
+}
+
+async function exportICal(user, { groupId } = {}) {
+  const gid = groupId || getCurrentGroupIdForUser(user);
+  const events = await Event.find({ groupId: gid }).sort({ startAt: 1 });
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//RoomSync UT//Events//EN',
+  ];
+  for (const e of events) {
+    lines.push('BEGIN:VEVENT');
+    lines.push(`UID:${String(e._id)}@roomsync`);
+    lines.push(`DTSTAMP:${toICSDate(new Date())}`);
+    lines.push(`DTSTART:${toICSDate(new Date(e.startAt))}`);
+    lines.push(`DTEND:${toICSDate(new Date(e.endAt))}`);
+    if (e.title) lines.push(`SUMMARY:${e.title.replace(/\n/g, ' ')}`);
+    if (e.locationText) lines.push(`LOCATION:${e.locationText.replace(/\n/g, ' ')}`);
+    lines.push('END:VEVENT');
+  }
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
+
+module.exports = { listEvents, createEvent, updateEvent, setRsvp, getAttendeesWithStatus, exportICal }; 

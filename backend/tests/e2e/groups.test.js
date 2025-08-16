@@ -127,4 +127,53 @@ describe('Group settings', () => {
     const after = await agent.get('/groups/current');
     expect(after.body.data.members.find((m) => m.email === email2)).toBeFalsy();
   });
+});
+
+describe('Group v3', () => {
+  test('list my groups and switch current', async () => {
+    const { agent } = await authAgent();
+    const g1 = await agent.post('/groups').send({ name: 'A' });
+    const g2 = await agent.post('/groups').send({ name: 'B' });
+    expect(g1.status).toBe(200);
+    expect(g2.status).toBe(200);
+
+    const list = await agent.get('/groups');
+    expect(list.status).toBe(200);
+    expect(list.body.data.length).toBe(2);
+
+    const target = list.body.data.find((g) => g.name === 'A');
+    const sw = await agent.post('/groups/switch').send({ groupId: target.id });
+    expect(sw.status).toBe(200);
+    expect(sw.body.data.name).toBe('A');
+  });
+
+  test('create/list/revoke invites and join via invite', async () => {
+    const { agent } = await authAgent();
+    await agent.post('/groups').send({ name: 'GroupInv' });
+
+    const createInvite = await agent.post('/groups/current/invites').send({ expiresInHours: 1 });
+    expect(createInvite.status).toBe(200);
+    expect(createInvite.body.data.code).toHaveLength(8);
+    expect(createInvite.body.data.link).toBeTruthy();
+
+    const invites = await agent.get('/groups/current/invites');
+    expect(invites.status).toBe(200);
+    expect(invites.body.data.length).toBeGreaterThanOrEqual(1);
+
+    const code = createInvite.body.data.code;
+
+    const res2 = await request(app).post('/auth/register').send({ email: `inv${Date.now()}@utexas.edu`, password: 'test1234', name: 'Invited' });
+    const token2 = res2.body.data.access_token;
+    const header2 = { Authorization: `Bearer ${token2}` };
+    const agent2 = {
+      post: (url) => request(app).post(url).set(header2),
+      get: (url) => request(app).get(url).set(header2),
+    };
+    const join = await agent2.post('/groups/join/invite').send({ inviteCode: code });
+    expect(join.status).toBe(200);
+    expect(join.body.data.members.length).toBe(2);
+
+    const revoke = await agent.post('/groups/current/invites/revoke').send({ code });
+    expect(revoke.status).toBe(200);
+  });
 }); 

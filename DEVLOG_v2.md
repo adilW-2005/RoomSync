@@ -93,3 +93,52 @@ Env:
 Notes:
 - Kept JSON success/error shapes consistent via `res.success` usage.
 - Preserved existing design language and UT branding. 
+
+Premium UI Overhaul (UT brand, v1.2):
+- Theme & tokens:
+  - Added `mobile/src/styles/theme.js` with colors, spacing, radii, typography, shadows.
+  - Fonts: Poppins Regular/SemiBold/Medium loaded in `mobile/App.js`.
+- Reusable UI:
+  - `mobile/src/components/UTText.js` for typography variants.
+  - `mobile/src/components/UTButton.js` (primary/secondary, animated press state).
+  - `mobile/src/components/UTCard.js` (16px radius, soft shadow).
+  - `mobile/src/components/UTInput.js` (labels in burnt orange, focus ring, 50px height).
+  - Polished `EmptyState` and `SkeletonList` to match brand neutrals.
+- Navigation polish:
+  - `MainTabs` active indicator (burnt orange bar) and subtle icon pulse; enlarged tab bar touch target.
+  - `AuthStack` headers with centered titles and Poppins.
+  - Smooth fade transitions added across stacks and primary tab screens.
+- Screens updated (visuals only, logic intact):
+  - Auth: `LoginScreen`, `RegisterScreen` rebuilt with UT components, consistent spacing and buttons.
+  - Dashboard: premium cards, greeting header, group summary in card; preserved sockets/group logic.
+  - Chores: cards for groups, premium FAB, UT-styled modal in `CreateChoreModal`.
+  - Events/Expenses/Inventory/Marketplace/Ratings/Map/Settings/Hangouts: applied UT headers, cards, inputs, and buttons; preserved all store/API logic.
+- Micro-interactions:
+  - Added `mobile/src/components/FadeSlideIn.js` and applied to lists (Events, Chores, Marketplace, Expenses, Inventory, Ratings) for subtle entrance animations.
+  - Button press animations via `UTButton`.
+  - Refined tab icon pulse + opacity fade on focus.
+  - `EmptyState` now gently fades/slides in.
+  - Added `mobile/src/components/PressableScale.js` and applied to FABs/primary actions for consistent press feedback.
+- Map markers and callouts:
+  - Added `mobile/src/components/UTPin.js` and replaced default markers with UT burnt-orange/gold pins; roommate markers use blue variant.
+  - Callouts show place name with star rating using `RatingStars` when available.
+- Accessibility:
+  - Ensured WCAG AA contrast on text/buttons; consistent 16pt body and 22–24pt headers. 
+impl
+v3 (Feature Completion for 1.0) — Phase 1 delivered:
+- Groups:
+  - Roles & permissions scaffold: `memberRoles` on `Group` with `owner/admin/member` and enforcement in updates.
+  - Group switcher: `GET /groups`, `POST /groups/switch` (moves selected to current); mobile UI in `GroupSettingsScreen`.
+  - Invites: `POST /groups/current/invites` returns `{ code, link, universal }`, `GET /groups/current/invites`, `POST /groups/current/invites/revoke`, `POST /groups/join/invite`.
+  - Deep links: invite links use `APP_SCHEME://invite?code=...` and universal `https://DEEP_LINK_HOST/invite/:code`.
+  - Tests: extended `backend/tests/e2e/groups.test.js` for listing, switching, invite create/list/revoke/join.
+- Auth/Profile:
+  - Unique username: added `username` on `User` with server validation; registration accepts optional username.
+  - Privacy: added `showContact` boolean; exposed via `PATCH /users/me`.
+  - Account deletion: `DELETE /users/me` removes user and group membership (GDPR-style minimal implementation).
+- Env:
+  - Added `APP_SCHEME` and `DEEP_LINK_HOST` to `backend/src/config/env.js`.
+- Mobile:
+  - `useGroupStore`: list/switch groups; invite create/list/revoke; join by invite.
+  - `GroupSettingsScreen`: switcher UI and invites section with shareable link.
+  - `useAuthStore`: registration supports username; added `deleteAccount`. 
