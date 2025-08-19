@@ -16,6 +16,13 @@ import HangoutsScreen from '../screens/Hangouts/HangoutsScreen';
 import { Ionicons } from '@expo/vector-icons';
 import GroupSettingsScreen from '../screens/Settings/GroupSettingsScreen';
 import { View, Animated } from 'react-native';
+import AddExpenseModal from '../screens/Expenses/AddExpenseModal';
+import CreateChoreModal from '../screens/Chores/CreateChoreModal';
+import ActivityInboxScreen from '../screens/Inbox/ActivityInboxScreen';
+import LivingScreen from '../screens/Living/LivingScreen';
+import ProfileScreen from '../screens/Profile/ProfileScreen';
+import AddExpenseScreen from '../screens/Expenses/AddExpenseScreen';
+import CreateChoreScreen from '../screens/Chores/CreateChoreScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -41,6 +48,46 @@ function MarketplaceStack() {
 function SettingsStack() {
   return (
     <Stack.Navigator screenOptions={{ animation: 'fade' }}>
+      <Stack.Screen name="SettingsHome" component={SettingsScreen} options={{ title: 'Settings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} options={{ title: 'Group Settings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+    </Stack.Navigator>
+  );
+}
+
+// New: Dashboard stack to keep legacy flows reachable from Dashboard
+function DashboardStack() {
+  return (
+    <Stack.Navigator screenOptions={{ animation: 'fade' }}>
+      <Stack.Screen name="DashboardHome" component={DashboardScreen} options={{ title: 'Dashboard', headerShown: false }} />
+      <Stack.Screen name="Chores" component={ChoresScreen} options={{ title: 'Chores', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="Events" component={EventsScreen} options={{ title: 'Events', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="Expenses" component={ExpensesScreen} options={{ title: 'Expenses', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="Inventory" component={InventoryScreen} options={{ title: 'Inventory', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="Hangouts" component={HangoutsScreen} options={{ title: 'Hangouts', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="ActivityInbox" component={ActivityInboxScreen} options={{ title: 'Inbox', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="AddExpense" component={AddExpenseScreen} options={{ presentation: 'modal', title: 'Add Expense', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="CreateChore" component={CreateChoreScreen} options={{ presentation: 'modal', title: 'Create Chore', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+    </Stack.Navigator>
+  );
+}
+
+// New: Living stack includes map and ratings flows
+function LivingStack() {
+  return (
+    <Stack.Navigator screenOptions={{ animation: 'fade' }}>
+      <Stack.Screen name="LivingHome" component={LivingScreen} options={{ title: 'Living', headerShown: false }} />
+      <Stack.Screen name="RatingsList" component={RatingsListScreen} options={{ title: 'Ratings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="RatingsDetail" component={RatingsDetailScreen} options={{ title: 'Details', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="Map" component={MapScreen} options={{ title: 'Map', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+    </Stack.Navigator>
+  );
+}
+
+// New: Profile stack wraps profile hub and settings
+function ProfileStack() {
+  return (
+    <Stack.Navigator screenOptions={{ animation: 'fade' }}>
+      <Stack.Screen name="ProfileHome" component={ProfileScreen} options={{ title: 'Profile', headerShown: false }} />
       <Stack.Screen name="SettingsHome" component={SettingsScreen} options={{ title: 'Settings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
       <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} options={{ title: 'Group Settings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
     </Stack.Navigator>
@@ -76,30 +123,18 @@ export default function MainTabs() {
       tabBarIcon: ({ color, focused }) => {
         const map = {
           Dashboard: 'home',
-          Chores: 'list',
-          Events: 'calendar',
-          Expenses: 'cash',
-          Map: 'map',
           Marketplace: 'cart',
-          Inventory: 'cube',
-          Ratings: 'star',
-          Hangouts: 'chatbubbles',
-          Settings: 'settings',
+          Living: 'home-outline',
+          Profile: 'person',
         };
         const name = map[route.name] || 'ellipse';
         return <TabIcon name={name} color={color} focused={focused} />;
       },
     })}>
-      <Tab.Screen name="Dashboard" component={DashboardScreen} options={{ animation: 'fade' }} />
-      <Tab.Screen name="Chores" component={ChoresScreen} options={{ animation: 'fade' }} />
-      <Tab.Screen name="Events" component={EventsScreen} options={{ animation: 'fade' }} />
-      <Tab.Screen name="Expenses" component={ExpensesScreen} options={{ animation: 'fade' }} />
-      <Tab.Screen name="Map" component={MapScreen} options={{ animation: 'fade' }} />
+      <Tab.Screen name="Dashboard" component={DashboardStack} options={{ headerShown: false }} />
       <Tab.Screen name="Marketplace" component={MarketplaceStack} options={{ headerShown: false }} />
-      <Tab.Screen name="Inventory" component={InventoryScreen} options={{ animation: 'fade' }} />
-      <Tab.Screen name="Ratings" component={RatingsStack} options={{ headerShown: false }} />
-      <Tab.Screen name="Hangouts" component={HangoutsScreen} options={{ animation: 'fade' }} />
-      <Tab.Screen name="Settings" component={SettingsStack} options={{ headerShown: false }} />
+      <Tab.Screen name="Living" component={LivingStack} options={{ headerShown: false }} />
+      <Tab.Screen name="Profile" component={ProfileStack} options={{ headerShown: false }} />
     </Tab.Navigator>
   );
 } 

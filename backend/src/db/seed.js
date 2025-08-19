@@ -112,7 +112,7 @@ const Rating = require('../models/Rating');
     loc: { lat: 30.2816, lng: -97.7420 },
     availableFrom: new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000),
     availableTo: new Date(now.getTime() + 80 * 24 * 60 * 60 * 1000),
-    status: 'active',
+    status: 'available',
   });
   await Listing.create({
     sellerId: user._id,
@@ -122,7 +122,7 @@ const Rating = require('../models/Rating');
     price: 60,
     photos: [],
     loc: { lat: 30.2870, lng: -97.7428 },
-    status: 'active',
+    status: 'available',
   });
 
   await Rating.deleteMany({});

@@ -13,11 +13,17 @@ import FadeSlideIn from '../../components/FadeSlideIn';
 import PressableScale from '../../components/PressableScale';
 import { spacing, colors } from '../../styles/theme';
 
-export default function MarketplaceScreen({ navigation }) {
+export default function MarketplaceScreen({ navigation, route }) {
   const { items, loading, filters, setFilters, fetch } = useListingStore();
   const [creating, setCreating] = useState(false);
 
   useEffect(() => { fetch(); }, [filters.type, filters.q, filters.min, filters.max]);
+
+  useEffect(() => {
+    if (route?.params?.type && route.params.type !== filters.type) {
+      setFilters({ type: route.params.type });
+    }
+  }, [route?.params?.type]);
 
   const onFavorite = async (id, fav) => {
     try {

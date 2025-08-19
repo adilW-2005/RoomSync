@@ -1,8 +1,11 @@
+import 'react-native-gesture-handler';
+import 'react-native-reanimated';
 import React from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_500Medium } from '@expo-google-fonts/poppins';
 import { ActivityIndicator, View, Alert, Linking } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import AuthStack from './src/app/AuthStack';
 import MainTabs from './src/app/MainTabs';
 import useAuthStore from './src/state/useAuthStore';
@@ -76,14 +79,16 @@ export default function App() {
     );
   }
   return (
-    <NavigationContainer theme={UTTheme}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {!user ? (
-          <Stack.Screen name="Auth" component={AuthStack} />
-        ) : (
-          <Stack.Screen name="Main" component={MainTabs} />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <NavigationContainer theme={UTTheme}>
+        <Stack.Navigator screenOptions={{ headerShown: false }}>
+          {!user ? (
+            <Stack.Screen name="Auth" component={AuthStack} />
+          ) : (
+            <Stack.Screen name="Main" component={MainTabs} />
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </GestureHandlerRootView>
   );
 } 
