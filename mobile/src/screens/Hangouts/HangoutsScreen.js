@@ -27,7 +27,10 @@ export default function HangoutsScreen() {
     const onProposal = async (payload) => {
       if (String(payload.groupId) !== String(currentGroup.id)) return;
       addProposal(payload);
-      await notifyHangoutProposal({ title: payload.title, time: payload.time, loc: payload.loc });
+      // Only notify if the proposal is from someone else
+      if (String(payload.authorId) !== String(user?.id)) {
+        await notifyHangoutProposal({ title: payload.title, time: payload.time, loc: payload.loc });
+      }
     };
     const onVote = async (payload) => {
       if (String(payload.groupId) !== String(currentGroup.id)) return;
@@ -36,16 +39,21 @@ export default function HangoutsScreen() {
       const yes = Object.values((p.votes || {})).filter((v) => v === 'yes').length + (payload.vote === 'yes' ? 1 : 0);
       const no = Object.values((p.votes || {})).filter((v) => v === 'no').length + (payload.vote === 'no' ? 1 : 0);
       if (yes - no >= 2) {
-        await notifyHangoutResult({ title: p.title || 'Hangout', result: 'Likely happening' });
+        // Only notify if this vote wasn't by self to avoid duplicate local notifs
+        if (String(payload.userId) !== String(user?.id)) {
+          await notifyHangoutResult({ title: p.title || 'Hangout', result: 'Likely happening' });
+        }
       }
     };
+    // Remove existing handlers first to avoid duplicates on re-render
+    try { socket?.off('hangout:proposal', onProposal); socket?.off('hangout:vote', onVote); } catch (_) {}
     socket?.on('hangout:proposal', onProposal);
     socket?.on('hangout:vote', onVote);
     return () => {
       socket?.off('hangout:proposal', onProposal);
       socket?.off('hangout:vote', onVote);
     };
-  }, [currentGroup?.id, proposals]);
+  }, [currentGroup?.id, proposals, user?.id]);
 
   const submit = () => {
     if (!currentGroup?.id || !user?.id) return;
@@ -81,7 +89,7 @@ export default function HangoutsScreen() {
         <TextInput style={styles.input} placeholder="Description (optional)" value={desc} onChangeText={setDesc} />
         <UTButton title="Propose" onPress={submit} />
       </UTCard>
-      <FlatList data={proposals} keyExtractor={(i) => i.id} renderItem={renderItem} />
+      <FlatList data={proposals} keyExtractor={(i) => i.id} renderItem={renderItem} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false} />
     </View>
   );
 }

@@ -35,8 +35,8 @@ export default function CreateChoreModal({ visible, onClose, onCreate, onUpdate,
 		success: '#22C55E',
 		warning: '#F59E0B',
 		danger: '#EF4444',
-		textMuted: isDark ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.65)',
-		cardBg: isDark ? 'rgba(20,20,20,.78)' : 'rgba(255,255,255,.92)'
+		textMuted: 'rgba(0,0,0,.65)',
+		cardBg: 'rgba(255,255,255,.92)'
 	};
 
 	// UI-only helpers
@@ -153,7 +153,7 @@ export default function CreateChoreModal({ visible, onClose, onCreate, onUpdate,
 	return (
 		<Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
 			<View style={styles.backdrop}>
-				<BlurView intensity={30} tint={isDark ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
+				<BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
 				<View style={[styles.card, { maxHeight: screenHeight * 0.74, paddingBottom: Math.max(insets.bottom, 16) + 70, backgroundColor: UT.cardBg }]}> 
 					{/* Top gradient and drag handle */}
 					
@@ -245,10 +245,10 @@ export default function CreateChoreModal({ visible, onClose, onCreate, onUpdate,
 							<View style={styles.section}>
 								<UTText variant="label" style={{ color: 'black', marginBottom: spacing.xs }}>{typeSegment === 'one' ? 'DUE DATE' : 'START DATE'}</UTText>
 														<Pressable onPress={() => { setShowPicker(true); setCurrentMonth(new Date((selectedDate || new Date()).getFullYear(), (selectedDate || new Date()).getMonth(), 1)); }} style={[styles.segmentPill, { backgroundColor: '#FFFFFF', alignSelf: 'flex-start' }]} accessibilityRole="button" accessibilityLabel="Open date picker">
-														<UTText style={{ color: isDark ? '#FFFFFF' : '#1E1E1E' }}>{formatDate(selectedDate)}</UTText>
+														<UTText style={{ color: '#1E1E1E' }}>{formatDate(selectedDate)}</UTText>
 								</Pressable>
 								{showPicker && (
-													<View style={[styles.pickerCard, { marginTop: spacing.xxl, backgroundColor: isDark ? 'rgba(20,20,20,0.92)' : '#FFFFFF' }]}>
+													<View style={[styles.pickerCard, { marginTop: spacing.xxl, backgroundColor: '#FFFFFF' }]}>
 														<View style={styles.pickerHeader}>
 															<Pressable onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} accessibilityRole="button" accessibilityLabel="Previous month" hitSlop={8}>
 																<Ionicons name="chevron-back" size={22} color={UT.primary} />
@@ -261,7 +261,7 @@ export default function CreateChoreModal({ visible, onClose, onCreate, onUpdate,
 														{/* Weekday header */}
 														<View style={styles.weekHeader}>
 															{['Su','Mo','Tu','We','Th','Fr','Sa'].map((w) => (
-																<UTText key={w} style={{ flex: 1, textAlign: 'center', color: isDark ? '#FFFFFF' : '#1E1E1E' }}>{w}</UTText>
+																<UTText key={w} style={{ flex: 1, textAlign: 'center', color: '#1E1E1E' }}>{w}</UTText>
 															))}
 														</View>
 														{/* Grid */}
@@ -277,7 +277,7 @@ export default function CreateChoreModal({ visible, onClose, onCreate, onUpdate,
 																		accessibilityRole="button"
 																		accessibilityLabel={`Select ${date.toDateString()}`}
 																	>
-																		<UTText style={{ color: selected ? '#fff' : (isDark ? '#FFFFFF' : '#1E1E1E') }}>
+																		<UTText style={{ color: selected ? '#fff' : '#1E1E1E' }}>
 																			{date.getDate()}
 																		</UTText>
 																		{today && !selected ? <View style={[styles.todayDot, { backgroundColor: UT.primary }]} /> : null}

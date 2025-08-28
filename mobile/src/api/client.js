@@ -1,7 +1,17 @@
 import axios from 'axios';
+import Constants from 'expo-constants';
+
+function resolveBaseUrl() {
+  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  const hostUri = Constants?.expoConfig?.hostUri || Constants?.manifest?.hostUri || '';
+  const host = hostUri.split(':')[0];
+  const isIp = /^\d+\.\d+\.\d+\.\d+$/.test(host);
+  if (isIp) return `http://${host}:4000`;
+  return 'http://localhost:4000';
+}
 
 const api = axios.create({
-  baseURL: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000',
+  baseURL: resolveBaseUrl(),
   timeout: 10000,
 });
 
@@ -15,7 +25,11 @@ api.interceptors.request.use((config) => {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
-  config.headers['Content-Type'] = 'application/json';
+  // Only set JSON content type when sending plain objects
+  const isFormData = (typeof FormData !== 'undefined') && (config.data instanceof FormData);
+  if (!isFormData && !config.headers['Content-Type']) {
+    config.headers['Content-Type'] = 'application/json';
+  }
   return config;
 });
 

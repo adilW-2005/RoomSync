@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Event = require('../models/Event');
 const Group = require('../models/Group');
 const { notifyUsers } = require('./notificationService');
+const { handle: orchestrate } = require('./notificationOrchestrator');
 
 function getCurrentGroupIdForUser(user) {
   const groupId = (user.groups || [])[0];
@@ -67,6 +68,19 @@ async function createEvent(user, payload) {
     createdBy: user._id,
   });
   try { if (attendees.length) await notifyUsers(attendees, 'events', 'New event', payload.title || ''); } catch (_) {}
+  try {
+    if (attendees.length) {
+      await orchestrate({
+        type: 'event.invite',
+        userIdTargets: attendees,
+        title: 'New event',
+        body: payload.title || 'New event',
+        data: { eventId: String(event._id) },
+        deeplink: `roomsync://events/${String(event._id)}`,
+        priority: 'normal',
+      });
+    }
+  } catch (_) {}
   return event.toJSON();
 }
 
@@ -143,6 +157,20 @@ async function setRsvp(user, eventId, status) {
   }
   await event.save();
   try { await notifyUsers(event.attendees || [], 'events', 'RSVP update', `${user.name || 'Someone'} is ${status}`); } catch (_) {}
+  try {
+    const targets = (event.attendees || []).filter((uid) => String(uid) !== String(user._id));
+    if (targets.length) {
+      await orchestrate({
+        type: 'event.rsvp.changed',
+        userIdTargets: targets,
+        title: 'RSVP update',
+        body: `${user.name || 'Someone'} is ${status}`,
+        data: { eventId: String(event._id) },
+        deeplink: `roomsync://events/${String(event._id)}`,
+        priority: 'low',
+      });
+    }
+  } catch (_) {}
   return event.toJSON();
 }
 

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import api from '../api/client';
+import { sdk } from '../api/sdk';
 
 const useChoreStore = create((set, get) => ({
 	openChores: [],
@@ -8,7 +8,7 @@ const useChoreStore = create((set, get) => ({
 	async fetchOpen() {
 		set({ loading: true });
 		try {
-			const chores = await api.get('/chores?status=open');
+			const chores = await sdk.chores.list({ status: 'open' });
 			set({ openChores: chores, loading: false });
 		} catch (e) {
 			set({ loading: false });
@@ -17,24 +17,24 @@ const useChoreStore = create((set, get) => ({
 	},
 	async fetchDone() {
 		try {
-			const chores = await api.get('/chores?status=done');
+			const chores = await sdk.chores.list({ status: 'done' });
 			set({ doneChores: chores });
 		} catch (e) {
 			/* ignore */
 		}
 	},
 	async completeChore(id) {
-		await api.post(`/chores/${id}/complete`);
+		await sdk.chores.complete(id);
 		const next = (get().openChores || []).filter(c => c.id !== id);
 		set({ openChores: next });
 	},
 	async createChore(payload) {
-		const created = await api.post('/chores', payload);
+		const created = await sdk.chores.create(payload);
 		set({ openChores: [...(get().openChores || []), created] });
 		return created;
 	},
 	async updateChore(id, updates) {
-		const updated = await api.patch(`/chores/${id}`, updates);
+		const updated = await sdk.chores.update(id, updates);
 		let list = (get().openChores || []).map(c => (c.id === id ? { ...c, ...updated } : c));
 		if (updated.status === 'done') {
 			list = list.filter(c => c.id !== id);

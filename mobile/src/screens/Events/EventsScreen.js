@@ -217,6 +217,7 @@ export default function EventsScreen({ navigation }) {
             </UTCard>
           </FadeSlideIn>
         )}
+        showsVerticalScrollIndicator={false}
       />
 
       {/* FAB */}

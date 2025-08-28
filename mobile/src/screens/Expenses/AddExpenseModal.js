@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from 'react-native';
+import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import useMemberStore from '../../state/useMemberStore';
 import * as ImagePicker from 'expo-image-picker';
+import { BlurView } from 'expo-blur';
+import UTText from '../../components/UTText';
+import UTInput from '../../components/UTInput';
+import UTButton from '../../components/UTButton';
+import { spacing } from '../../styles/theme';
 
 export default function AddExpenseModal({ visible, onClose, onCreate }) {
   const { membersById } = useMemberStore();
@@ -38,42 +43,69 @@ export default function AddExpenseModal({ visible, onClose, onCreate }) {
     } else {
       await onCreate({ amount: total, split: 'equal', notes, receiptBase64 });
     }
-    setAmount('');
-    setNotes('');
-    setSplit('equal');
-    setShares({});
-    setReceiptBase64(null);
+    setAmount(''); setNotes(''); setSplit('equal'); setShares({}); setReceiptBase64(null);
     onClose();
   };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.backdrop}>
+        <BlurView intensity={30} tint="light" style={StyleSheet.absoluteFill} />
         <View style={styles.card}>
-          <Text style={styles.title}>Add Expense</Text>
-          <View style={styles.row}>
-            <TouchableOpacity style={[styles.toggle, split === 'equal' && styles.toggleActive]} onPress={() => setSplit('equal')}><Text style={[styles.toggleText, split === 'equal' && styles.toggleTextActive]}>Equal</Text></TouchableOpacity>
-            <TouchableOpacity style={[styles.toggle, split === 'custom' && styles.toggleActive]} onPress={() => setSplit('custom')}><Text style={[styles.toggleText, split === 'custom' && styles.toggleTextActive]}>Custom</Text></TouchableOpacity>
+          <View style={styles.handleContainer}><View style={styles.handle} /></View>
+          <View style={styles.headerRow}>
+            <UTText variant="subtitle" style={{ fontSize: 20, fontFamily: 'Poppins_600SemiBold' }}>Add Expense</UTText>
+            <TouchableOpacity onPress={onClose}><UTText variant="subtitle" style={{ color: '#BF5700' }}>Close</UTText></TouchableOpacity>
           </View>
-          <TextInput style={styles.input} placeholder="Amount" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
-          <TextInput style={styles.input} placeholder="Notes (optional)" value={notes} onChangeText={setNotes} />
-          {split === 'custom' ? (
-            <View style={{ marginTop: 8 }}>
-              {Object.entries(membersById).map(([userId, name]) => (
-                <View style={styles.shareRow} key={userId}>
-                  <Text style={styles.shareName}>{name}</Text>
-                  <TextInput style={styles.shareInput} keyboardType="decimal-pad" placeholder="0" value={shares[userId] || ''} onChangeText={(v) => onChangeShare(userId, v)} />
+
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <ScrollView contentContainerStyle={{ paddingBottom: 150 }} showsVerticalScrollIndicator={false}>
+              <View style={styles.section}>
+                <UTText variant="label" style={{ color: 'black', marginBottom: spacing.xs }}>AMOUNT</UTText>
+                <UTInput placeholder="$0.00" keyboardType="decimal-pad" value={amount} onChangeText={setAmount} />
+              </View>
+
+              <View style={styles.section}>
+                <UTText variant="label" style={{ color: 'black', marginBottom: spacing.xs }}>NOTES</UTText>
+                <UTInput placeholder="Optional" value={notes} onChangeText={setNotes} />
+              </View>
+
+              <View style={styles.section}>
+                <UTText variant="label" style={{ color: 'black', marginBottom: spacing.xs }}>SPLIT</UTText>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <TouchableOpacity style={[styles.segmentPill, split === 'equal' ? { backgroundColor: '#BF5700' } : { backgroundColor: '#FFFFFF' }]} onPress={() => setSplit('equal')}>
+                    <UTText style={{ color: split === 'equal' ? '#fff' : '#BF5700', fontFamily: 'Poppins_600SemiBold' }}>Equal</UTText>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.segmentPill, split === 'custom' ? { backgroundColor: '#BF5700' } : { backgroundColor: '#FFFFFF' }]} onPress={() => setSplit('custom')}>
+                    <UTText style={{ color: split === 'custom' ? '#fff' : '#BF5700', fontFamily: 'Poppins_600SemiBold' }}>Custom</UTText>
+                  </TouchableOpacity>
                 </View>
-              ))}
-            </View>
-          ) : null}
-          {receiptBase64 ? <Image source={{ uri: receiptBase64 }} style={styles.receipt} /> : null}
-          <View style={styles.row}>
-            <TouchableOpacity style={styles.secondary} onPress={pickReceipt}><Text style={styles.secondaryText}>Add Receipt</Text></TouchableOpacity>
-            <View style={{ flexDirection: 'row' }}>
-              <TouchableOpacity style={[styles.button, styles.cancel]} onPress={onClose}><Text style={styles.cancelText}>Cancel</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.button} onPress={submit}><Text style={styles.buttonText}>Create</Text></TouchableOpacity>
-            </View>
+              </View>
+
+              {split === 'custom' ? (
+                <View style={[styles.section, { marginTop: spacing.sm }]}>
+                  {Object.entries(membersById).map(([userId, name]) => (
+                    <View style={styles.shareRow} key={userId}>
+                      <UTText variant="body" style={{ flex: 1 }}>{name}</UTText>
+                      <UTInput keyboardType="decimal-pad" placeholder="0" value={shares[userId] || ''} onChangeText={(v) => onChangeShare(userId, v)} style={{ minWidth: 90 }} />
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+
+              <View style={styles.section}>
+                <UTText variant="label" style={{ color: 'black', marginBottom: spacing.xs }}>RECEIPT</UTText>
+                {receiptBase64 ? <Image source={{ uri: receiptBase64 }} style={styles.receipt} /> : null}
+                <TouchableOpacity style={[styles.segmentPill, { backgroundColor: '#FFFFFF', alignSelf: 'flex-start', marginTop: spacing.xs }]} onPress={pickReceipt}>
+                  <UTText style={{ color: '#BF5700', fontFamily: 'Poppins_600SemiBold' }}>Add Receipt</UTText>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+
+          <View style={styles.footer}> 
+            <UTButton title="Cancel" variant="secondary" onPress={onClose} style={{ flex: 1, marginRight: spacing.sm }} />
+            <UTButton title="Create" onPress={submit} style={{ flex: 1, marginLeft: spacing.sm }} />
           </View>
         </View>
       </View>
@@ -83,22 +115,13 @@ export default function AddExpenseModal({ visible, onClose, onCreate }) {
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.2)', justifyContent: 'flex-end' },
-  card: { backgroundColor: '#fff', padding: 16, borderTopLeftRadius: 16, borderTopRightRadius: 16 },
-  title: { fontSize: 18, color: '#BF5700', fontFamily: 'Poppins_600SemiBold', marginBottom: 12 },
-  input: { borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 12, padding: 12, marginBottom: 12 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, alignItems: 'center' },
-  button: { backgroundColor: '#BF5700', padding: 12, borderRadius: 12, minWidth: 120, alignItems: 'center', marginLeft: 8 },
-  buttonText: { color: '#fff', fontFamily: 'Poppins_600SemiBold' },
-  cancel: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#BF5700' },
-  cancelText: { color: '#BF5700', fontFamily: 'Poppins_600SemiBold' },
-  toggle: { flex: 1, padding: 10, borderWidth: 1, borderColor: '#BF5700', borderRadius: 10, alignItems: 'center', marginRight: 8 },
-  toggleActive: { backgroundColor: '#BF5700' },
-  toggleText: { color: '#BF5700', fontFamily: 'Poppins_600SemiBold' },
-  toggleTextActive: { color: '#fff' },
+  card: { borderTopLeftRadius: 24, borderTopRightRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.92)', paddingBottom: 84 },
+  handleContainer: { alignItems: 'center', paddingTop: 8 },
+  handle: { width: 42, height: 5, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.15)' },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, marginTop: 6 },
+  section: { paddingHorizontal: spacing.lg, marginTop: spacing.md },
+  segmentPill: { height: 44, paddingHorizontal: 16, borderRadius: 999, borderWidth: 0, alignItems: 'center', justifyContent: 'center' },
   shareRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  shareName: { fontFamily: 'Poppins_400Regular', color: '#222', marginRight: 8, flex: 1 },
-  shareInput: { borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8, minWidth: 80, textAlign: 'right' },
-  secondary: { backgroundColor: '#F2D388', padding: 10, borderRadius: 10 },
-  secondaryText: { color: '#333', fontFamily: 'Poppins_600SemiBold' },
+  footer: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, backgroundColor: 'transparent', flexDirection: 'row' },
   receipt: { width: 64, height: 64, borderRadius: 8 }
 }); 

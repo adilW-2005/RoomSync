@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import api from '../api/client';
+import { sdk } from '../api/sdk';
 
 const useListingStore = create((set, get) => ({
   items: [],
@@ -8,17 +8,15 @@ const useListingStore = create((set, get) => ({
   setFilters(partial) {
     set({ filters: { ...get().filters, ...partial } });
   },
+  optimisticFavorite(id, fav) {
+    const next = (get().items || []).map((it) => (String(it.id) === String(id) ? { ...it, isFavorited: fav } : it));
+    set({ items: next });
+  },
   async fetch() {
     set({ loading: true });
     try {
       const { type, q, min, max } = get().filters;
-      const params = new URLSearchParams();
-      if (type) params.append('type', type);
-      if (q) params.append('q', q);
-      if (min) params.append('min', String(min));
-      if (max) params.append('max', String(max));
-      const path = params.toString() ? `/listings?${params.toString()}` : '/listings';
-      const res = await api.get(path);
+      const res = await sdk.listings.list({ type, q, min, max });
       set({ items: res, loading: false });
     } catch (e) {
       set({ loading: false });

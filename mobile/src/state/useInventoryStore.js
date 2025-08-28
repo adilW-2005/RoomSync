@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import api from '../api/client';
+import { sdk } from '../api/sdk';
 
 const useInventoryStore = create((set, get) => ({
   items: [],
@@ -7,8 +7,7 @@ const useInventoryStore = create((set, get) => ({
   async fetchItems({ q } = {}) {
     set({ loading: true });
     try {
-      const url = q ? `/inventory?q=${encodeURIComponent(q)}` : '/inventory';
-      const items = await api.get(url);
+      const items = await sdk.inventory.list({ q });
       set({ items, loading: false });
     } catch (e) {
       set({ loading: false });
@@ -16,17 +15,17 @@ const useInventoryStore = create((set, get) => ({
     }
   },
   async createItem(payload) {
-    const created = await api.post('/inventory', payload);
+    const created = await sdk.inventory.create(payload);
     set({ items: [created, ...(get().items || [])] });
     return created;
   },
   async updateItem(id, updates) {
-    const updated = await api.patch(`/inventory/${id}`, updates);
+    const updated = await sdk.inventory.update(id, updates);
     set({ items: (get().items || []).map((i) => (i.id === id ? updated : i)) });
     return updated;
   },
   async deleteItem(id) {
-    await api.delete(`/inventory/${id}`);
+    await sdk.inventory.remove(id);
     set({ items: (get().items || []).filter((i) => i.id !== id) });
   }
 }));

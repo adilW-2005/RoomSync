@@ -2,9 +2,17 @@ let ioInstance = null;
 
 function attachSocket(server) {
   const { Server } = require('socket.io');
+  const { loadEnv } = require('./config/env');
+  const env = loadEnv();
+  const allowedOrigins = (env.ALLOWED_ORIGINS || '*')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const corsOrigin = allowedOrigins.length === 1 && allowedOrigins[0] === '*' ? '*' : allowedOrigins;
+
   const io = new Server(server, {
     cors: {
-      origin: '*',
+      origin: corsOrigin,
       methods: ['GET', 'POST']
     }
   });
@@ -37,14 +45,14 @@ function attachSocket(server) {
       }
     });
 
-    // Listing chat demo: broadcast to seller specifically via seller room
+    // Deprecated demo: broadcast to seller specifically via seller room
     socket.on('chat:message', (payload) => {
       if (payload?.toSellerId) {
         io.to(String(payload.toSellerId)).emit('chat:message', payload);
       }
     });
 
-    // Allow users to join their own user room for direct messages
+    // Allow users to join their own user room for direct messages & notifications
     socket.on('join:user', ({ userId }) => {
       if (userId) socket.join(String(userId));
     });

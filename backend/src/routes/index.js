@@ -14,8 +14,15 @@ const { getBalances } = require('../services/expenseService');
 const Joi = require('joi');
 const hangoutsRoutes = require('./hangouts');
 const moderationRoutes = require('./moderation');
+const messagesRoutes = require('./messages');
+const notificationsRoutes = require('./notifications');
+const devicesRoutes = require('./devices');
+const notificationPrefsRoutes = require('./notificationPrefs');
 
 const router = Router();
+
+// Public health check
+router.get('/healthz', (_req, res) => res.json({ ok: true }));
 
 router.use('/auth', authRoutes);
 router.use('/users', usersRoutes);
@@ -29,6 +36,12 @@ router.use('/listings', listingsRoutes);
 router.use('/ratings', ratingsRoutes);
 router.use('/hangouts', hangoutsRoutes);
 router.use('/moderation', moderationRoutes);
+router.use('/messages', messagesRoutes);
+router.use('/notifications', notificationsRoutes);
+router.use('/devices', devicesRoutes);
+router.use('/notification_prefs', notificationPrefsRoutes);
+router.use('/schedule', require('./schedule'));
+router.use('/nav', require('./nav'));
 
 // Spec requires GET /balances as computed summary
 router.get('/balances', authRequired, async (req, res, next) => {

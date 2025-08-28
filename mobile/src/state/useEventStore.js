@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import api from '../api/client';
+import { sdk } from '../api/sdk';
 
 const useEventStore = create((set, get) => ({
   events: [],
@@ -7,7 +7,7 @@ const useEventStore = create((set, get) => ({
   async fetchEvents() {
     set({ loading: true });
     try {
-      const items = await api.get('/events');
+      const items = await sdk.events.list();
       set({ events: items, loading: false });
     } catch (e) {
       set({ loading: false });
@@ -15,7 +15,7 @@ const useEventStore = create((set, get) => ({
     }
   },
   async createEvent(payload) {
-    const created = await api.post('/events', payload);
+    const created = await sdk.events.create(payload);
     set({ events: [created, ...(get().events || [])] });
     return created;
   }

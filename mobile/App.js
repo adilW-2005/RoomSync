@@ -10,7 +10,8 @@ import AuthStack from './src/app/AuthStack';
 import MainTabs from './src/app/MainTabs';
 import useAuthStore from './src/state/useAuthStore';
 import useGroupStore from './src/state/useGroupStore';
-import { requestNotificationPermissions } from './src/lib/notifications';
+import { requestNotificationPermissions, registerForPushToken } from './src/lib/notifications';
+import ErrorBoundary from './src/components/ErrorBoundary';
 
 const Stack = createNativeStackNavigator();
 
@@ -71,6 +72,14 @@ export default function App() {
     })();
   }, [firstRun]);
 
+  React.useEffect(() => {
+    let unbind = () => {};
+    if (user) {
+      registerForPushToken().catch(() => {});
+    }
+    return () => { try { unbind(); } catch (_) {} };
+  }, [user]);
+
   if (!loaded || !authHydrated || !groupHydrated) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -80,15 +89,17 @@ export default function App() {
   }
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <NavigationContainer theme={UTTheme}>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {!user ? (
-            <Stack.Screen name="Auth" component={AuthStack} />
-          ) : (
-            <Stack.Screen name="Main" component={MainTabs} />
-          )}
-        </Stack.Navigator>
-      </NavigationContainer>
+      <ErrorBoundary>
+        <NavigationContainer theme={UTTheme}>
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            {!user ? (
+              <Stack.Screen name="Auth" component={AuthStack} />
+            ) : (
+              <Stack.Screen name="Main" component={MainTabs} />
+            )}
+          </Stack.Navigator>
+        </NavigationContainer>
+      </ErrorBoundary>
     </GestureHandlerRootView>
   );
 } 

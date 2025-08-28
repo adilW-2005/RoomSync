@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import api from '../api/client';
+import { sdk } from '../api/sdk';
 
 const useExpenseStore = create((set, get) => ({
   expenses: [],
@@ -8,7 +8,7 @@ const useExpenseStore = create((set, get) => ({
   async fetchExpenses({ page = 1, limit = 20 } = {}) {
     set({ loading: true });
     try {
-      const res = await api.get(`/expenses?page=${page}&limit=${limit}`);
+      const res = await sdk.expenses.list({ page, limit });
       set({ expenses: page === 1 ? res.items : [...(get().expenses || []), ...res.items], loading: false });
       return res;
     } catch (e) {
@@ -17,11 +17,11 @@ const useExpenseStore = create((set, get) => ({
     }
   },
   async fetchBalances() {
-    const b = await api.get('/expenses/balances');
+    const b = await sdk.expenses.balances();
     set({ balances: b });
   },
   async createExpense(payload) {
-    const created = await api.post('/expenses', payload);
+    const created = await sdk.expenses.create(payload);
     set({ expenses: [created, ...(get().expenses || [])] });
     return created;
   }

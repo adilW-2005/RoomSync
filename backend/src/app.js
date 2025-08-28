@@ -1,52 +1,106 @@
 const express = require('express');
-const helmet = require('helmet');
 const cors = require('cors');
 const morgan = require('morgan');
+const bodyParser = require('body-parser');
+const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const { router } = require('./routes');
-const { errorHandler, notFoundHandler } = require('./middlewares/error');
-const { successEnvelope } = require('./utils/response');
+const compression = require('compression');
+const mongoSanitize = require('express-mongo-sanitize');
+const hpp = require('hpp');
+const xssClean = require('xss-clean');
+const { router: apiRouter } = require('./routes');
+const { notFoundHandler, errorHandler } = require('./middlewares/error');
+const { successResponder } = require('./utils/response');
 const { loadEnv } = require('./config/env');
 
 function createApp() {
   const app = express();
   const env = loadEnv();
 
-  app.disable('x-powered-by');
+  // Security headers
   app.use(helmet());
-  app.use(cors({
-    origin: [
-      'http://localhost:19006',
-      'http://localhost:19000',
-      'http://localhost:3000',
-      'exp://127.0.0.1:19000',
-      'exp://localhost:19000',
-      '*'
-    ],
-    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  }));
-  app.use(morgan('dev'));
-  app.use(express.json({ limit: '2mb' }));
 
-  // Attach helper to send success responses in envelope
-  app.use((req, res, next) => {
-    res.success = (data, message, code) => {
-      return res.json(successEnvelope(data, message, code));
-    };
-    next();
-  });
+  // Trust proxy for accurate protocol/ip when behind load balancers
+  if (env.TRUST_PROXY === 'true') {
+    app.enable('trust proxy');
+  }
 
-  // Rate limit auth endpoints
-  const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100 });
-  app.use('/auth', authLimiter);
+  // Optional HTTPS enforcement (useful behind proxies)
+  if (env.ENFORCE_HTTPS === 'true') {
+    app.use((req, res, next) => {
+      const proto = req.headers['x-forwarded-proto'] || req.protocol;
+      if (proto !== 'https') {
+        const host = req.headers.host;
+        const url = `https://${host}${req.originalUrl}`;
+        return res.redirect(301, url);
+      }
+      next();
+    });
+  }
 
-  // Routes
-  app.use('/', router);
+  // CORS configuration
+  const allowedOrigins = (env.ALLOWED_ORIGINS || '*')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  app.use(
+    cors({
+      origin: allowedOrigins.length === 1 && allowedOrigins[0] === '*' ? '*' : allowedOrigins,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Authorization', 'Content-Type'],
+      credentials: false,
+      maxAge: 600,
+    })
+  );
 
-  // 404 and error handlers
+  // Logging
+  const morganFormat = env.NODE_ENV === 'production' ? 'combined' : 'dev';
+  app.use(morgan(morganFormat));
+
+  // Compression
+  app.use(compression());
+
+  // Body parsing
+  app.use(bodyParser.json({ limit: '2mb' }));
+
+  // Sanitize and harden
+  app.use(mongoSanitize());
+  app.use(hpp());
+  app.use(xssClean());
+
+  // Unified success responder
+  app.use(successResponder);
+
+  // Basic rate limiting (apply globally)
+  const windowMs = Number(env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
+  const max = Number(env.RATE_LIMIT_MAX || 300);
+  app.use(
+    rateLimit({
+      windowMs,
+      max,
+      standardHeaders: true,
+      legacyHeaders: false,
+      // Use request IP when not behind proxy; if behind proxy, user sets TRUST_PROXY=true
+      validate: {
+        trustProxy: env.TRUST_PROXY === 'true',
+      },
+    })
+  );
+
+  // API routes
+  app.use('/', apiRouter);
+
+  // 404 handler
   app.use(notFoundHandler);
+
+  // Error handler
   app.use(errorHandler);
+
+  // Start background scheduler for notification delivery (skip during tests)
+  const { startScheduler } = require('./services/notificationDelivery');
+  if (env.NODE_ENV !== 'test') {
+    startScheduler();
+  }
 
   return app;
 }

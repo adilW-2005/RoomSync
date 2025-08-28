@@ -53,7 +53,7 @@ export default function InventoryScreen() {
     <View style={styles.container}>
       <UTText variant="title" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>Inventory</UTText>
       <UTInput placeholder="Search items" value={q} onChangeText={(t) => { setQ(t); fetchItems({ q: t }); }} style={{ marginBottom: spacing.md }} />
-      <FlatList data={items} keyExtractor={(i) => i.id} renderItem={renderItem} refreshing={loading} onRefresh={fetchItems} />
+      <FlatList data={items} keyExtractor={(i) => i.id} renderItem={renderItem} refreshing={loading} onRefresh={fetchItems} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false} />
 
       <PressableScale onPress={() => setModal(true)} style={styles.fab}>
         <UTText variant="title" style={{ color: '#fff' }}>+</UTText>

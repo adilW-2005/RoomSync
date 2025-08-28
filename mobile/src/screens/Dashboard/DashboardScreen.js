@@ -12,6 +12,8 @@ import RoommateCard from '../../components/RoommateCard';
 import useMemberStore from '../../state/useMemberStore';
 import { spacing, colors } from '../../styles/theme';
 import { Ionicons } from '@expo/vector-icons';
+import useMessageStore from '../../state/useMessageStore';
+import useNotificationStore from '../../state/useNotificationStore';
 
 const HEADER_H = 64;
 const ROW_GAP = 12; // smaller gap per spec
@@ -25,6 +27,8 @@ export default function DashboardScreen({ navigation }) {
   const { membersById, fetchCurrentGroupMembers } = useMemberStore();
   const [tabsH, setTabsH] = useState(34);
   const [matesH, setMatesH] = useState(170);
+  const { openOrCreateDM } = useMessageStore();
+  const { unreadCount: notifUnread, refreshUnreadCount } = useNotificationStore();
 
   useEffect(() => {
     (async () => {
@@ -37,6 +41,7 @@ export default function DashboardScreen({ navigation }) {
       ensureSocket(token);
       joinGroupRoom(currentGroup.id);
     }
+    refreshUnreadCount().catch(() => {});
   }, [token, currentGroup?.id]);
 
   const win = Dimensions.get('window');
@@ -89,10 +94,19 @@ export default function DashboardScreen({ navigation }) {
     }
   };
 
+  const onMessageRoommate = async (otherUserId) => {
+    try {
+      const conv = await openOrCreateDM(otherUserId);
+      navigation.navigate('Messages', { screen: 'Conversation', params: { conversationId: conv.id } });
+    } catch (e) {
+      Alert.alert('Error', e.message || 'Could not open chat');
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar barStyle="dark-content" />
-      <GradientHeader title="RoomSync" rightIcon="notifications-outline" height={HEADER_H} overlayHeight={160} onPressSettings={openInbox} />
+      <GradientHeader title="RoomSync" rightIcon="notifications-outline" rightBadge={notifUnread} height={HEADER_H} overlayHeight={160} onPressSettings={openInbox} />
       <View onLayout={(e) => setTabsH(e.nativeEvent.layout.height)}>
         <PillTabs active={activeTab} onChange={setActiveTab} tabs={['Today', 'This Week', 'Overdue', 'Nearby']} />
       </View>
@@ -110,7 +124,7 @@ export default function DashboardScreen({ navigation }) {
             keyExtractor={(item) => item.id}
             renderItem={({ item }) => (
               <View style={{ width: win.width, alignItems: 'center' }}>
-                <RoommateCard name={item.name} fact={item.fact} style={{ width: cardW, height: heroH }} />
+                <RoommateCard name={item.name} fact={item.fact} style={{ width: cardW, height: heroH }} onMessage={item.id !== 'you' ? () => onMessageRoommate(item.id) : undefined} />
               </View>
             )}
             horizontal

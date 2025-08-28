@@ -3,6 +3,7 @@ const { applyBaseSchemaTransforms } = require('../utils/mongooseUtils');
 
 const messageSchema = new mongoose.Schema({
   listingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Listing', index: true },
+  conversationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Conversation', index: true },
   fromUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   toUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   text: { type: String, default: '' },

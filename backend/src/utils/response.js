@@ -11,4 +11,11 @@ function errorEnvelope(message, code, details) {
   return payload;
 }
 
-module.exports = { successEnvelope, errorEnvelope }; 
+function successResponder(req, res, next) {
+  res.success = (data, message, code) => {
+    return res.json(successEnvelope(data, message, code));
+  };
+  next();
+}
+
+module.exports = { successEnvelope, errorEnvelope, successResponder }; 

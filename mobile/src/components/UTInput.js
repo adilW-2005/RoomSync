@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     fontFamily: typography.body.fontFamily,
     fontSize: typography.body.fontSize,
     color: colors.deepCharcoal,
-    backgroundColor: colors.white,
+    backgroundColor: 'rgba(255,255,255,0.92)',
   },
   focused: {
     borderColor: colors.burntOrange,

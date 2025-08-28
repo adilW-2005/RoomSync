@@ -1,0 +1,437 @@
+openapi: 3.0.3
+info:
+  title: RoomSync UT API
+  version: 1.0.0
+servers:
+  - url: https://api.roomsync.local
+  - url: http://localhost:4000
+paths:
+  /chores:
+    get:
+      summary: List chores
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [open, done] }
+        - in: query
+          name: groupId
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+    post:
+      summary: Create chore
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, dueAt]
+              properties:
+                groupId: { type: string }
+                title: { type: string }
+                assignees: { type: array, items: { type: string } }
+                repeat: { type: string, enum: [none, daily, weekly, custom] }
+                customDays: { type: array, items: { type: integer, minimum: 0, maximum: 6 } }
+                dueAt: { type: string, format: date-time }
+                pointsPerCompletion: { type: integer }
+      responses:
+        '200': { description: OK }
+  /chores/{id}:
+    patch:
+      summary: Update chore
+      parameters:
+        - in: path
+          required: true
+          name: id
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses:
+        '200': { description: OK }
+  /chores/{id}/complete:
+    post:
+      summary: Complete chore
+      parameters:
+        - in: path
+          required: true
+          name: id
+          schema: { type: string }
+      responses:
+        '200': { description: OK }
+  /events:
+    get:
+      summary: List events
+      parameters:
+        - in: query
+          name: groupId
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+    post:
+      summary: Create event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, startAt, endAt]
+              properties:
+                groupId: { type: string }
+                title: { type: string }
+                startAt: { type: string, format: date-time }
+                endAt: { type: string, format: date-time }
+                locationText: { type: string }
+                attendees: { type: array, items: { type: string } }
+                lat: { type: number }
+                lng: { type: number }
+                repeat: { type: string, enum: [none, daily, weekly, custom] }
+                customDays: { type: array, items: { type: integer, minimum: 0, maximum: 6 } }
+      responses: { '200': { description: OK } }
+  /events/{id}/rsvp:
+    post:
+      summary: Set RSVP status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [going, maybe, not] }
+      responses: { '200': { description: OK } }
+  /expenses:
+    get:
+      summary: List expenses paginated
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: groupId
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+    post:
+      summary: Create expense
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, split]
+              properties:
+                groupId: { type: string }
+                payerId: { type: string }
+                amount: { type: number }
+                split: { type: string, enum: [equal, custom, unequal, percent, shares] }
+                shares: { type: array, items: { type: object } }
+                notes: { type: string }
+                receiptBase64: { type: string }
+                recurring: { type: object }
+      responses: { '200': { description: OK } }
+  /expenses/balances:
+    get:
+      summary: Get balances
+      parameters:
+        - in: query
+          name: groupId
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+  /inventory:
+    get:
+      summary: List inventory
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: category
+          schema: { type: string }
+        - in: query
+          name: tag
+          schema: { type: string }
+        - in: query
+          name: groupId
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+    post:
+      summary: Create inventory item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, qty]
+              properties:
+                groupId: { type: string }
+                ownerId: { type: string }
+                name: { type: string }
+                qty: { type: number }
+                shared: { type: boolean }
+                expiresAt: { type: string, format: date-time }
+                photoBase64: { type: string }
+                lowStockThreshold: { type: number }
+                categories: { type: array, items: { type: string } }
+                tags: { type: array, items: { type: string } }
+      responses: { '200': { description: OK } }
+  /inventory/{id}:
+    patch:
+      summary: Update inventory item
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses: { '200': { description: OK } }
+    delete:
+      summary: Delete inventory item
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+  /listings:
+    get:
+      summary: List marketplace listings
+      parameters:
+        - in: query
+          name: type
+          schema: { type: string, enum: [sublet, sublets, furniture, textbooks, parking, other] }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: min
+          schema: { type: number }
+        - in: query
+          name: max
+          schema: { type: number }
+        - in: query
+          name: category
+          schema: { type: string }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [price_asc, price_desc, date_asc, date_desc] }
+      responses: { '200': { description: OK } }
+    post:
+      summary: Create listing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, title, price]
+              properties:
+                type: { type: string, enum: [sublet, sublets, furniture, textbooks, parking, other] }
+                categories: { type: array, items: { type: string } }
+                title: { type: string }
+                description: { type: string }
+                price: { type: number }
+                photos: { type: array, items: { type: string } }
+                photosBase64: { type: array, items: { type: string } }
+                loc: { type: object, properties: { lat: { type: number }, lng: { type: number } } }
+                availableFrom: { type: string, format: date-time }
+                availableTo: { type: string, format: date-time }
+                status: { type: string, enum: [available, pending, sold] }
+      responses: { '200': { description: OK } }
+  /listings/{id}:
+    patch:
+      summary: Update listing
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object }
+      responses: { '200': { description: OK } }
+  /listings/{id}/favorite:
+    post:
+      summary: Favorite listing
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+  /listings/{id}/unfavorite:
+    post:
+      summary: Unfavorite listing
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+  /locations/beacon:
+    post:
+      summary: Send presence beacon
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [groupId, lat, lng]
+              properties:
+                groupId: { type: string }
+                lat: { type: number }
+                lng: { type: number }
+                battery: { type: number }
+                shareMinutes: { type: integer }
+      responses: { '200': { description: OK } }
+  /locations/presence:
+    get:
+      summary: Get group presence
+      parameters:
+        - in: query
+          name: groupId
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+  /ratings/avg:
+    get:
+      summary: Get average rating
+      parameters:
+        - in: query
+          name: placeId
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+  /ratings/by-place:
+    get:
+      summary: List ratings by place
+      parameters:
+        - in: query
+          name: placeId
+          required: true
+          schema: { type: string }
+      responses: { '200': { description: OK } }
+  /ratings:
+    post:
+      summary: Create rating
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, placeId, placeName, stars]
+              properties:
+                kind: { type: string, enum: [apartment, dorm] }
+                placeId: { type: string }
+                placeName: { type: string }
+                stars: { type: number, minimum: 1, maximum: 5 }
+                pros: { type: array, items: { type: string } }
+                cons: { type: array, items: { type: string } }
+                tips: { type: string }
+                photos: { type: array, items: { type: string } }
+                photosBase64: { type: array, items: { type: string } }
+      responses: { '200': { description: OK } }
+  /notifications:
+    get:
+      summary: List notifications
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [unread, all], default: all }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: List of notifications
+  /notifications/unread_count:
+    get:
+      summary: Unread notifications count
+      responses:
+        '200': { description: Count }
+  /notifications/{id}/read:
+    post:
+      summary: Mark a notification as read
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Updated notification }
+  /notifications/read_all:
+    post:
+      summary: Mark all notifications as read
+      responses:
+        '200': { description: OK }
+  /devices:
+    post:
+      summary: Register device token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token: { type: string }
+                platform: { type: string, enum: [ios, android, web, expo] }
+      responses:
+        '200': { description: Device registered }
+  /notification_prefs:
+    get:
+      summary: Get notification preferences
+      responses:
+        '200': { description: Preferences }
+    put:
+      summary: Update notification preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categories: { type: object, additionalProperties: { type: boolean } }
+                channels:
+                  type: object
+                  properties:
+                    push: { type: boolean }
+                    inapp: { type: boolean }
+                    email: { type: boolean }
+                    sms: { type: boolean }
+                quietHours:
+                  type: object
+                  properties:
+                    start: { type: string }
+                    end: { type: string }
+                    tz: { type: string }
+                digest:
+                  type: string
+                  enum: [daily, weekly, off]
+      responses:
+        '200': { description: Updated preferences } 

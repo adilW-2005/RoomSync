@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import UTText from '../../components/UTText';
 import UTCard from '../../components/UTCard';
 import UTButton from '../../components/UTButton';
@@ -11,6 +11,7 @@ import useEventStore from '../../state/useEventStore';
 import useHangoutStore from '../../state/useHangoutStore';
 import useAuthStore from '../../state/useAuthStore';
 import useGroupStore from '../../state/useGroupStore';
+import useNotificationStore from '../../state/useNotificationStore';
 import { spacing, colors } from '../../styles/theme';
 
 export default function ActivityInboxScreen({ navigation }) {
@@ -20,50 +21,37 @@ export default function ActivityInboxScreen({ navigation }) {
   const { proposals, vote } = useHangoutStore();
   const { user } = useAuthStore();
   const { currentGroup } = useGroupStore();
+  const { items, hydrate, markRead, markAllRead, navigateByDeeplink, refreshUnreadCount } = useNotificationStore();
 
   useEffect(() => {
-    fetchOpen();
-    fetchExpenses({ page: 1 });
-    fetchEvents();
+    hydrate();
   }, []);
-
-  const items = useMemo(() => {
-    const list = [];
-    for (const c of openChores || []) list.push({ id: `chore-${c.id}`, type: 'chore', title: `Chore: ${c.title}`, subtitle: `Due ${new Date(c.dueAt || Date.now()).toLocaleDateString()}`, chore: c });
-    for (const e of events || []) list.push({ id: `event-${e.id}`, type: 'event', title: `Event: ${e.title}`, subtitle: new Date(e.startAt).toLocaleString(), event: e });
-    for (const x of expenses || []) list.push({ id: `expense-${x.id}`, type: 'expense', title: `Receipt: ${x.title || 'Expense'}`, subtitle: `$${(x.amount || 0).toFixed(2)}`, expense: x });
-    for (const p of proposals || []) list.push({ id: `hangout-${p.id}`, type: 'hangout', title: `Hangout: ${p.title}`, subtitle: p.time ? new Date(p.time).toLocaleString() : 'Vote now', proposal: p });
-    return list.sort((a, b) => String(a.id).localeCompare(String(b.id)));
-  }, [openChores, events, expenses, proposals]);
 
   const renderItem = ({ item, index }) => (
     <FadeSlideIn delay={index * 30}>
       <UTCard style={{ marginBottom: spacing.md }}>
-        <UTText variant="subtitle">{item.title}</UTText>
-        <UTText variant="meta" style={{ marginTop: 4 }}>{item.subtitle}</UTText>
-        {item.type === 'chore' ? (
-          <UTButton title="Complete" onPress={() => completeChore(item.chore.id)} style={{ marginTop: spacing.sm, alignSelf: 'flex-start' }} />
-        ) : item.type === 'event' ? (
-          <UTButton title="View" variant="secondary" onPress={() => navigation.navigate('Events')} style={{ marginTop: spacing.sm, alignSelf: 'flex-start' }} />
-        ) : item.type === 'expense' ? (
-          <UTButton title="View" variant="secondary" onPress={() => navigation.navigate('Expenses')} style={{ marginTop: spacing.sm, alignSelf: 'flex-start' }} />
-        ) : item.type === 'hangout' ? (
-          <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
-            <UTButton title="Yes" onPress={() => vote({ proposalId: item.proposal.id, userId: user?.id, groupId: currentGroup?.id, vote: 'yes' })} />
-            <UTButton title="No" variant="secondary" onPress={() => vote({ proposalId: item.proposal.id, userId: user?.id, groupId: currentGroup?.id, vote: 'no' })} />
-          </View>
-        ) : null}
+        <TouchableOpacity onPress={async () => {
+          await markRead(item.id).catch(() => {});
+          navigateByDeeplink(navigation, item.deeplink, item.data);
+          refreshUnreadCount().catch(() => {});
+        }}>
+          <UTText variant="subtitle" style={{ color: item.readAt ? undefined : colors.burntOrange }}>{item.title}</UTText>
+          <UTText variant="meta" style={{ marginTop: 4 }}>{item.body}</UTText>
+        </TouchableOpacity>
       </UTCard>
     </FadeSlideIn>
   );
 
   return (
     <View style={styles.container}>
-      <UTText variant="title" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>Activity</UTText>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.sm }}>
+        <UTText variant="title" style={{ color: colors.burntOrange }}>Inbox</UTText>
+        <UTButton variant="secondary" title="Mark all read" onPress={markAllRead} />
+      </View>
       {!items.length ? (
         <EmptyState title="You're all caught up" subtitle="New activity will appear here." />
       ) : (
-        <FlatList data={items} keyExtractor={(i) => i.id} renderItem={renderItem} />
+        <FlatList data={items} keyExtractor={(i) => i.id} renderItem={renderItem} contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false} />
       )}
     </View>
   );

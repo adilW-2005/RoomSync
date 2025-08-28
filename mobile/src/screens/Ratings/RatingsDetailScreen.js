@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, StyleSheet, FlatList, TextInput, TouchableOpacity, Alert, Image, SafeAreaView } from 'react-native';
 import api from '../../api/client';
 import * as ImagePicker from 'expo-image-picker';
 import useAuthStore from '../../state/useAuthStore';
 import UTText from '../../components/UTText';
 import UTCard from '../../components/UTCard';
 import UTButton from '../../components/UTButton';
-import { spacing, colors } from '../../styles/theme';
+import FadeSlideIn from '../../components/FadeSlideIn';
+import GradientHeader from '../../components/GradientHeader';
+import { LinearGradient } from 'expo-linear-gradient';
+import { spacing, colors, radii } from '../../styles/theme';
 
 export default function RatingsDetailScreen({ route }) {
   const { place } = route.params;
@@ -51,15 +54,11 @@ export default function RatingsDetailScreen({ route }) {
     try { await api.delete(`/ratings/${id}`); await fetchItems(); } catch (e) { Alert.alert('Error', e.message || 'Failed'); }
   };
 
-  return (
-    <View style={styles.container}>
-      <UTText variant="title" style={{ color: colors.burntOrange, padding: spacing.md }}>{place.placeName}</UTText>
-      <FlatList
-        style={{ flex: 1, paddingHorizontal: spacing.lg }}
-        data={items}
-        keyExtractor={(i) => i.id}
-        renderItem={({ item }) => (
-          <UTCard style={{ marginBottom: spacing.md }}>
+  const renderItem = ({ item, index }) => (
+    <FadeSlideIn delay={index * 40}>
+      <View style={styles.cardShadow}>
+        <LinearGradient colors={["#FFF9F2", "#FFFFFF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradientCard}>
+          <UTCard style={{ backgroundColor: 'transparent' }}>
             <UTText variant="subtitle">{'★'.repeat(item.stars)}{'☆'.repeat(5 - item.stars)}</UTText>
             {item.tips ? <UTText variant="body" style={{ marginTop: spacing.xs }}>{item.tips}</UTText> : null}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm }}>
@@ -73,23 +72,43 @@ export default function RatingsDetailScreen({ route }) {
               </View>
             ) : null}
           </UTCard>
-        )}
-      />
-      <View style={{ borderTopWidth: 1, borderTopColor: '#eee', padding: spacing.lg }}>
-        <UTText variant="subtitle" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>Add Review</UTText>
-        <TextInput style={styles.input} placeholder="Stars (1-5)" keyboardType="number-pad" value={stars} onChangeText={setStars} />
-        <TextInput style={styles.input} placeholder="Tips (optional)" value={tips} onChangeText={setTips} />
-        <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center', marginBottom: spacing.md }}>
-          {photosBase64.map((u, idx) => (<Image key={idx} source={{ uri: u }} style={{ width: 40, height: 40, borderRadius: 6 }} />))}
-          <UTButton title="Add Photos" variant="secondary" onPress={pickPhotos} />
-        </View>
-        <UTButton title="Submit" onPress={submit} />
+        </LinearGradient>
       </View>
-    </View>
+    </FadeSlideIn>
+  );
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+      <GradientHeader title={place.placeName} rightIcon="options-outline" />
+      <FlatList
+        style={{ flex: 1 }}
+        data={items}
+        keyExtractor={(i) => i.id}
+        renderItem={renderItem}
+        contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: 140 }}
+      />
+      <View style={{ position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: 20 }}>
+        <View style={styles.cardShadow}>
+          <LinearGradient colors={["#FFF9F2", "#FFFFFF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradientCard}>
+            <UTCard style={{ backgroundColor: 'transparent' }}>
+              <UTText variant="subtitle" style={{ color: colors.burntOrange, marginBottom: spacing.xs }}>Add Review</UTText>
+              <TextInput style={styles.input} placeholder="Stars (1-5)" keyboardType="number-pad" value={stars} onChangeText={setStars} />
+              <TextInput style={styles.input} placeholder="Tips (optional)" value={tips} onChangeText={setTips} />
+              <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center', marginBottom: spacing.md }}>
+                {photosBase64.map((u, idx) => (<Image key={idx} source={{ uri: u }} style={{ width: 40, height: 40, borderRadius: 6 }} />))}
+                <UTButton title="Add Photos" variant="secondary" onPress={pickPhotos} />
+              </View>
+              <UTButton title="Submit" onPress={submit} />
+            </UTCard>
+          </LinearGradient>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  input: { borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 12, padding: 12, marginBottom: 12 },
+  input: { borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 12, padding: 12, marginBottom: 12, backgroundColor: '#FFFFFF' },
+  cardShadow: { borderRadius: radii.card, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 7 },
+  gradientCard: { borderRadius: radii.card, overflow: 'hidden' },
 }); 

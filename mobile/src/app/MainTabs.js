@@ -23,6 +23,10 @@ import LivingScreen from '../screens/Living/LivingScreen';
 import ProfileScreen from '../screens/Profile/ProfileScreen';
 import AddExpenseScreen from '../screens/Expenses/AddExpenseScreen';
 import CreateChoreScreen from '../screens/Chores/CreateChoreScreen';
+import MessagesListScreen from '../screens/Inbox/MessagesListScreen';
+import ConversationScreen from '../screens/Inbox/ConversationScreen';
+import useMessageStore from '../state/useMessageStore';
+import useNotificationStore from '../state/useNotificationStore';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -39,8 +43,8 @@ function RatingsStack() {
 function MarketplaceStack() {
   return (
     <Stack.Navigator screenOptions={{ animation: 'fade' }}>
-      <Stack.Screen name="MarketplaceList" component={MarketplaceScreen} options={{ title: 'Marketplace', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
-      <Stack.Screen name="ListingDetail" component={ListingDetailScreen} options={{ title: 'Listing', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="MarketplaceList" component={MarketplaceScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ListingDetail" component={ListingDetailScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -79,6 +83,18 @@ function LivingStack() {
       <Stack.Screen name="RatingsList" component={RatingsListScreen} options={{ title: 'Ratings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
       <Stack.Screen name="RatingsDetail" component={RatingsDetailScreen} options={{ title: 'Details', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
       <Stack.Screen name="Map" component={MapScreen} options={{ title: 'Map', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="MapGuide" component={require('../screens/Map/MapGuideScreen').default} options={{ title: 'Guide Me', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="UploadSchedule" component={require('../screens/Dashboard/UploadScheduleScreen').default} options={{ title: 'Upload Schedule', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+    </Stack.Navigator>
+  );
+}
+
+// New: Messages stack
+function MessagesStack() {
+  return (
+    <Stack.Navigator screenOptions={{ animation: 'fade' }}>
+      <Stack.Screen name="MessagesHome" component={MessagesListScreen} options={{ title: 'Messages', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="Conversation" component={ConversationScreen} options={{ title: 'Conversation', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
     </Stack.Navigator>
   );
 }
@@ -86,10 +102,10 @@ function LivingStack() {
 // New: Profile stack wraps profile hub and settings
 function ProfileStack() {
   return (
-    <Stack.Navigator screenOptions={{ animation: 'fade' }}>
+    <Stack.Navigator screenOptions={{ animation: 'fade' }} initialRouteName="ProfileHome">
       <Stack.Screen name="ProfileHome" component={ProfileScreen} options={{ title: 'Profile', headerShown: false }} />
-      <Stack.Screen name="SettingsHome" component={SettingsScreen} options={{ title: 'Settings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
-      <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} options={{ title: 'Group Settings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="SettingsHome" component={SettingsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -114,6 +130,8 @@ const TabIcon = ({ name, color, focused }) => {
 };
 
 export default function MainTabs() {
+  const { unreadTotal } = useMessageStore();
+  const { unreadCount: notifUnread } = useNotificationStore();
   return (
     <Tab.Navigator screenOptions={({ route }) => ({
       headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' },
@@ -125,15 +143,18 @@ export default function MainTabs() {
           Dashboard: 'home',
           Marketplace: 'cart',
           Living: 'home-outline',
+          Messages: 'chatbubbles',
           Profile: 'person',
         };
         const name = map[route.name] || 'ellipse';
         return <TabIcon name={name} color={color} focused={focused} />;
       },
+      tabBarBadge: route.name === 'Messages' && unreadTotal > 0 ? unreadTotal : undefined,
     })}>
       <Tab.Screen name="Dashboard" component={DashboardStack} options={{ headerShown: false }} />
       <Tab.Screen name="Marketplace" component={MarketplaceStack} options={{ headerShown: false }} />
       <Tab.Screen name="Living" component={LivingStack} options={{ headerShown: false }} />
+      <Tab.Screen name="Messages" component={MessagesStack} options={{ headerShown: false }} />
       <Tab.Screen name="Profile" component={ProfileStack} options={{ headerShown: false }} />
     </Tab.Navigator>
   );

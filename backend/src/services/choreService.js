@@ -3,6 +3,7 @@ const Chore = require('../models/Chore');
 const Group = require('../models/Group');
 const { uploadBase64ToCloudinary } = require('./cloudinaryService');
 const { notifyUsers } = require('./notificationService');
+const { handle: orchestrate } = require('./notificationOrchestrator');
 
 function getCurrentGroupIdForUser(user) {
   const groupId = (user.groups || [])[0];
@@ -89,6 +90,20 @@ async function createChore(user, payload) {
   });
 
   notifyChoreAssigned(chore);
+  try {
+    const assigneesStr = assignees.map(String);
+    if (assigneesStr.length) {
+      await orchestrate({
+        type: 'chore.assigned',
+        userIdTargets: assigneesStr,
+        title: 'New chore assigned',
+        body: chore.title || 'Chore assigned',
+        data: { choreId: String(chore._id) },
+        deeplink: `roomsync://chores/${String(chore._id)}`,
+        priority: 'normal',
+      });
+    }
+  } catch (_) {}
   return chore.toJSON();
 }
 
@@ -147,6 +162,21 @@ async function completeChore(user, id) {
   const points = chore.pointsPerCompletion || 10;
   chore.completions.push({ userId: user._id, completedAt: new Date(), points });
   await chore.save();
+
+  try {
+    const assignees = (chore.assignees || []).map(String);
+    if (assignees.length) {
+      await orchestrate({
+        type: 'chore.completed',
+        userIdTargets: assignees,
+        title: 'Chore completed',
+        body: chore.title || 'Chore completed',
+        data: { choreId: String(chore._id) },
+        deeplink: `roomsync://chores/${String(chore._id)}`,
+        priority: 'low',
+      });
+    }
+  } catch (_) {}
 
   // Create next instance if repeating
   if (chore.repeat && chore.repeat !== 'none') {

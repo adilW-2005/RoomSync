@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 
-export default function RoommateCard({ name, status = 'Available', fact = 'Online recently', style }) {
+export default function RoommateCard({ name, status = 'Available', fact = 'Online recently', style, onMessage }) {
   const initial = (name || '?').slice(0, 1).toUpperCase();
   const statusColor = status === 'Available' ? colors.burntOrange : '#9CA3AF';
   return (
@@ -18,6 +18,11 @@ export default function RoommateCard({ name, status = 'Available', fact = 'Onlin
             <Text style={{ color: '#6B7280', fontFamily: 'Poppins_400Regular', fontSize: 12 }}>{status}</Text>
           </View>
         </View>
+        {onMessage ? (
+          <TouchableOpacity onPress={onMessage} style={{ backgroundColor: '#FFF6EC', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 }}>
+            <Text style={{ color: colors.burntOrange, fontFamily: 'Poppins_600SemiBold', fontSize: 12 }}>Message</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
       <Text numberOfLines={1} style={{ color: '#6B7280', fontFamily: 'Poppins_400Regular', fontSize: 12 }}>{fact}</Text>
     </View>

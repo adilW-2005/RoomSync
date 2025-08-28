@@ -9,7 +9,7 @@ const router = Router();
 router.get('/', async (req, res, next) => {
   try {
     const schema = Joi.object({
-      type: Joi.string().valid('sublet', 'furniture', 'other').optional(),
+      type: Joi.string().valid('sublet', 'sublets', 'furniture', 'textbooks', 'other', 'parking').optional(),
       q: Joi.string().optional(),
       min: Joi.number().min(0).optional(),
       max: Joi.number().min(0).optional(),
@@ -36,14 +36,14 @@ const createLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20 });
 router.post('/', authRequired, createLimiter, async (req, res, next) => {
   try {
     const schema = Joi.object({
-      type: Joi.string().valid('sublet', 'furniture', 'other').required(),
+      type: Joi.string().valid('sublet', 'sublets', 'furniture', 'textbooks', 'other', 'parking').required(),
       categories: Joi.array().items(Joi.string()).default([]),
       title: Joi.string().min(1).required(),
       description: Joi.string().allow('').optional(),
       price: Joi.number().min(0).required(),
       photos: Joi.array().items(Joi.string()).default([]),
       photosBase64: Joi.array().items(Joi.string().base64({ paddingRequired: false })).optional(),
-      loc: Joi.object({ lat: Joi.number().required(), lng: Joi.number().required() }).required(),
+      loc: Joi.object({ lat: Joi.number().required(), lng: Joi.number().required() }).optional(),
       availableFrom: Joi.date().optional(),
       availableTo: Joi.date().optional(),
       status: Joi.string().valid('available', 'pending', 'sold').optional(),
@@ -66,7 +66,7 @@ router.post('/', authRequired, createLimiter, async (req, res, next) => {
 router.patch('/:id', authRequired, async (req, res, next) => {
   try {
     const schema = Joi.object({
-      type: Joi.string().valid('sublet', 'furniture', 'other').optional(),
+      type: Joi.string().valid('sublet', 'sublets', 'furniture', 'textbooks', 'other', 'parking').optional(),
       categories: Joi.array().items(Joi.string()).optional(),
       title: Joi.string().min(1).optional(),
       description: Joi.string().allow('').optional(),

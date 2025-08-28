@@ -11,13 +11,13 @@ const locSchema = new mongoose.Schema(
 
 const listingSchema = new mongoose.Schema({
   sellerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-  type: { type: String, enum: ['sublet', 'furniture', 'other'], required: true, index: true },
+  type: { type: String, enum: ['sublet', 'sublets', 'furniture', 'textbooks', 'other', 'parking'], required: true, index: true },
   categories: [{ type: String, index: true }],
   title: { type: String, required: true },
   description: { type: String, default: '' },
   price: { type: Number, required: true, min: 0, index: true },
   photos: [{ type: String }],
-  loc: { type: locSchema, required: true },
+  loc: { type: locSchema, required: false },
   availableFrom: { type: Date },
   availableTo: { type: Date },
   status: { type: String, enum: ['available', 'pending', 'sold'], default: 'available', index: true },

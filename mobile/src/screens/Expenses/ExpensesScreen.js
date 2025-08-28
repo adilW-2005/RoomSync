@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, FlatList, Linking, Alert, Image } from 'react-native';
+import { View, StyleSheet, FlatList, Linking, Alert, Image, SafeAreaView } from 'react-native';
 import useExpenseStore from '../../state/useExpenseStore';
 import AddExpenseModal from './AddExpenseModal';
 import useMemberStore from '../../state/useMemberStore';
@@ -9,7 +9,11 @@ import UTButton from '../../components/UTButton';
 import SkeletonList from '../../components/SkeletonList';
 import EmptyState from '../../components/EmptyState';
 import FadeSlideIn from '../../components/FadeSlideIn';
-import { spacing, colors } from '../../styles/theme';
+import PressableScale from '../../components/PressableScale';
+import GradientHeader from '../../components/GradientHeader';
+import { LinearGradient } from 'expo-linear-gradient';
+import { spacing, colors, radii } from '../../styles/theme';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ExpensesScreen() {
   const { balances, expenses, fetchBalances, fetchExpenses, createExpense } = useExpenseStore();
@@ -41,49 +45,85 @@ export default function ExpensesScreen() {
 
   const renderExpense = ({ item, index }) => (
     <FadeSlideIn delay={index * 40}>
-      <UTCard style={{ marginBottom: spacing.md }}>
-        <UTText variant="subtitle" style={{ marginBottom: spacing.xs }}>{membersById[item.payerId] || item.payerId}</UTText>
-        <UTText variant="meta">${item.amount.toFixed(2)} {item.notes ? `• ${item.notes}` : ''}</UTText>
-        {item.receiptUrl ? (
-          <Image source={{ uri: item.receiptUrl }} style={{ width: 80, height: 80, borderRadius: 8, marginTop: spacing.xs }} />
-        ) : null}
-      </UTCard>
+      <View style={styles.cardShadow}>
+        <LinearGradient colors={["#FFF9F2", "#FFFFFF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradientCard}>
+          <UTCard style={{ backgroundColor: 'transparent', padding: spacing.md }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={styles.avatar}>
+                <UTText variant="subtitle" style={{ color: colors.burntOrange }}>{(String(membersById[item.payerId] || item.payerId).trim()[0] || '?').toUpperCase()}</UTText>
+              </View>
+              <View style={{ flex: 1, marginLeft: spacing.md }}>
+                <UTText variant="subtitle" numberOfLines={1}>{membersById[item.payerId] || item.payerId}</UTText>
+                <UTText variant="meta" numberOfLines={1} style={{ marginTop: 2 }}>{item.notes || 'No notes'}</UTText>
+              </View>
+              <UTText variant="subtitle" style={{ color: colors.burntOrange }}>${item.amount.toFixed(2)}</UTText>
+            </View>
+            {item.receiptUrl ? (
+              <Image source={{ uri: item.receiptUrl }} style={{ width: 84, height: 84, borderRadius: 10, marginTop: spacing.sm }} />
+            ) : null}
+          </UTCard>
+        </LinearGradient>
+      </View>
     </FadeSlideIn>
   );
 
   return (
-    <View style={styles.container}>
-      <UTText variant="title" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>Balances</UTText>
-      <UTCard style={{ marginBottom: spacing.md }}>
-        {balances?.length ? (
-          balances.map((b) => (
-            <View key={b.userId} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs }}>
-              <UTText variant="body">{membersById[b.userId] || b.userId}</UTText>
-              <UTText variant="body" style={{ color: b.amount < 0 ? '#e74c3c' : '#2ecc71' }}>{b.amount.toFixed(2)}</UTText>
-            </View>
-          ))
-        ) : (
-          <EmptyState title="All settled" subtitle="No outstanding balances." />
-        )}
-      </UTCard>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+      <View style={styles.container}>
+        <GradientHeader title="Expenses" rightIcon="cloud-download-outline" onPressSettings={onExportCsv} />
 
-      <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
-        <UTButton title="Add Expense" onPress={() => setModal(true)} style={{ flex: 1 }} />
-        <UTButton title="Export CSV" variant="secondary" onPress={onExportCsv} style={{ flex: 1 }} />
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <UTText variant="subtitle" style={{ marginBottom: spacing.xs }}>Balances</UTText>
+          <View style={styles.cardShadow}>
+            <LinearGradient colors={["#FFF9F2", "#FFFFFF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradientCard}>
+              <UTCard style={{ backgroundColor: 'transparent' }}>
+                {balances?.length ? (
+                  balances.map((b) => (
+                    <View key={b.userId} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs }}>
+                      <UTText variant="body">{membersById[b.userId] || b.userId}</UTText>
+                      <UTText variant="body" style={{ color: b.amount < 0 ? '#e74c3c' : '#2ecc71' }}>{b.amount.toFixed(2)}</UTText>
+                    </View>
+                  ))
+                ) : (
+                  <EmptyState title="All settled" subtitle="No outstanding balances." />
+                )}
+              </UTCard>
+            </LinearGradient>
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: spacing.md, marginTop: spacing.md, marginBottom: spacing.md }}>
+            <UTButton title="Add Expense" onPress={() => setModal(true)} style={{ flex: 1 }} />
+            <UTButton title="Export CSV" variant="secondary" onPress={onExportCsv} style={{ flex: 1 }} />
+          </View>
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.sm, flex: 1 }}>
+          <UTText variant="subtitle" style={{ marginBottom: spacing.xs }}>History</UTText>
+          {expenses?.length ? (
+            <FlatList
+              data={expenses}
+              keyExtractor={(i) => i.id}
+              renderItem={renderExpense}
+              onEndReached={loadMore}
+              onEndReachedThreshold={0.5}
+              ItemSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+              contentContainerStyle={{ paddingBottom: 120 }}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : (
+            <EmptyState title="No expenses yet" subtitle="Add your first expense." />
+          )}
+        </View>
+
+        <AddExpenseModal visible={modal} onClose={() => setModal(false)} onCreate={onCreate} />
       </View>
-
-      <UTText variant="title" style={{ color: colors.burntOrange, marginBottom: spacing.sm }}>History</UTText>
-      {expenses?.length ? (
-        <FlatList data={expenses} keyExtractor={(i) => i.id} renderItem={renderExpense} onEndReached={loadMore} onEndReachedThreshold={0.5} />
-      ) : (
-        <EmptyState title="No expenses yet" subtitle="Add your first expense." />
-      )}
-
-      <AddExpenseModal visible={modal} onClose={() => setModal(false)} onCreate={onCreate} />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: spacing.lg, backgroundColor: '#F8F8F8' },
+  container: { flex: 1, backgroundColor: colors.white },
+  cardShadow: { borderRadius: radii.card, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 7 },
+  gradientCard: { borderRadius: radii.card, overflow: 'hidden' },
+  avatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFE4D1', alignItems: 'center', justifyContent: 'center' },
 }); 

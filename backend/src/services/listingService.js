@@ -5,6 +5,7 @@ const { uploadBase64ToCloudinary } = require('./cloudinaryService');
 const { tryGetIO } = require('../socket');
 const { notifyUsers } = require('./notificationService');
 const { isBlocked, sanitizeText } = require('./moderationService');
+const { handle: orchestrate } = require('./notificationOrchestrator');
 
 async function listListings(query = {}) {
   const filter = {};
@@ -45,7 +46,7 @@ async function createListing(user, payload) {
     description: payload.description || '',
     price: Number(payload.price),
     photos,
-    loc: { lat: Number(payload.loc.lat), lng: Number(payload.loc.lng) },
+    loc: payload.loc ? { lat: Number(payload.loc.lat), lng: Number(payload.loc.lng) } : undefined,
     availableFrom: payload.availableFrom ? new Date(payload.availableFrom) : undefined,
     availableTo: payload.availableTo ? new Date(payload.availableTo) : undefined,
     status: 'available',
@@ -85,6 +86,20 @@ async function toggleFavorite(user, listingId, fav) {
   const op = fav ? { $addToSet: { favoriteListings: listingId } } : { $pull: { favoriteListings: listingId } };
   await User.updateOne({ _id: user._id }, op);
   const fresh = await User.findById(user._id);
+  try {
+    const listing = await Listing.findById(listingId);
+    if (listing && fav) {
+      await orchestrate({
+        type: 'marketplace.listing.favorited',
+        userIdTargets: [listing.sellerId],
+        title: 'Listing favorited',
+        body: `${fresh.name || 'Someone'} favorited your listing`,
+        data: { listingId: String(listing._id) },
+        deeplink: `roomsync://marketplace/listing/${String(listing._id)}`,
+        priority: 'low',
+      });
+    }
+  } catch (_) {}
   return fresh.toJSON();
 }
 
@@ -112,6 +127,18 @@ async function sendMessage(user, payload) {
   }
   // Push
   try { await notifyUsers([toUserId], 'messages', 'New message', safeText || ''); } catch (_) {}
+  try {
+    const listing = listingId ? await Listing.findById(listingId) : null;
+    await orchestrate({
+      type: 'marketplace.message',
+      userIdTargets: [toUserId],
+      title: 'New message about your listing',
+      body: safeText ? safeText.slice(0, 120) : 'You have a new message',
+      data: { listingId: listing ? String(listing._id) : undefined },
+      deeplink: listing ? `roomsync://marketplace/listing/${String(listing._id)}` : undefined,
+      priority: 'high',
+    });
+  } catch (_) {}
   return msg.toJSON();
 }
 
