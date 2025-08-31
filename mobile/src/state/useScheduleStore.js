@@ -1,7 +1,7 @@
 import create from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
-animport * as Notifications from 'expo-notifications';
+import * as Notifications from 'expo-notifications';
 import { ScheduleAPI, NavAPI } from '../api/sdk';
 
 const STORAGE_KEY = 'roomsync_schedule_prefs';
