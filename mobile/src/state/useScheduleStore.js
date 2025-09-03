@@ -10,7 +10,7 @@ const useScheduleStore = create((set, get) => ({
 	nextClass: null,
 	etaMinutes: null,
 	refreshing: false,
-	ui: { showNextCard: true },
+	ui: { showNextCard: true, use12h: true },
 	leadTimes: [30, 15, 10], // minutes before start
 	scheduledIds: [], // local notification identifiers
 	warningLate: false,
@@ -28,6 +28,16 @@ const useScheduleStore = create((set, get) => ({
 		const data = { ui: mergedUi, leadTimes: get().leadTimes };
 		set({ ui: mergedUi });
 		try { await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch (_) {}
+	},
+	formatTime24ToPref(hhmm) {
+		try {
+			const use12h = get().ui?.use12h !== false;
+			if (!use12h) return hhmm;
+			const [h, m] = String(hhmm).split(':').map((x) => parseInt(x, 10));
+			const mer = h >= 12 ? 'PM' : 'AM';
+			const hour12 = ((h % 12) || 12);
+			return `${hour12}:${String(m).padStart(2, '0')} ${mer}`;
+		} catch (_) { return hhmm; }
 	},
 	async setLeadTimes(leadTimes) {
 		set({ leadTimes: Array.from(new Set(leadTimes)).sort((a,b) => a-b) });

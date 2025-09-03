@@ -156,7 +156,7 @@ export default function LivingScreen({ navigation }) {
         <Callout tooltip>
           <UTCard>
             <UTText variant="subtitle">{nextClass.course}</UTText>
-            <UTText variant="meta">{nextClass.building} {nextClass.room || ''} • {nextClass.start_time}</UTText>
+            <UTText variant="meta">{nextClass.building} {nextClass.room || ''} • {useScheduleStore.getState().formatTime24ToPref(nextClass.start_time)}</UTText>
           </UTCard>
         </Callout>
       </Marker>
@@ -337,7 +337,7 @@ export default function LivingScreen({ navigation }) {
                       <View style={{ flex: 1 }}>
                         <UTText variant="subtitle">{event.course}</UTText>
                         <UTText variant="meta">
-                          {event.days.join('')} • {event.start_time} - {event.end_time}
+                          {event.days.join('')} • {useScheduleStore.getState().formatTime24ToPref(event.start_time)} - {useScheduleStore.getState().formatTime24ToPref(event.end_time)}
                         </UTText>
                         <UTText variant="meta">
                           {event.building} {event.room || ''}
@@ -420,7 +420,7 @@ export default function LivingScreen({ navigation }) {
               </Pressable>
             </View>
             <UTText variant="meta">
-              {nextClass ? `${nextClass.course} • ${nextClass.building} ${nextClass.room || ''} • ${nextClass.start_time}` : 'No upcoming class'}
+              {nextClass ? `${nextClass.course} • ${nextClass.building || (nextClass.location ? '' : 'Online')} ${nextClass.room || ''} • ${useScheduleStore.getState().formatTime24ToPref(nextClass.start_time)}` : 'No upcoming class'}
             </UTText>
             <View style={{ flexDirection: 'row', marginTop: 6 }}>
               {etaMinutes != null ? (<UTText variant="meta">ETA {etaMinutes} min</UTText>) : null}
@@ -429,9 +429,15 @@ export default function LivingScreen({ navigation }) {
             <View style={{ marginTop: spacing.md, flexDirection: 'row', justifyContent: 'space-between' }}>
               <UTButton title="Refresh" variant="secondary" onPress={refreshNext} style={{ flex: 1, marginRight: spacing.sm }} />
               {nextClass ? (
-                <Pressable onPress={onGuideToggle} style={{ justifyContent: 'center', alignItems: 'center', flex: 1 }}>
-                  <UTText variant="label">{guiding ? 'Stop' : 'Guide Me'}</UTText>
-                </Pressable>
+                nextClass?.location?.lat && nextClass?.location?.lng ? (
+                  <Pressable onPress={onGuideToggle} style={{ justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+                    <UTText variant="label">{guiding ? 'Stop' : 'Guide Me'}</UTText>
+                  </Pressable>
+                ) : (
+                  <Pressable onPress={() => navigation.navigate('UploadSchedule')} style={{ justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+                    <UTText variant="label">Online Class</UTText>
+                  </Pressable>
+                )
               ) : (
                 <Pressable onPress={() => navigation.navigate('UploadSchedule')} style={{ justifyContent: 'center', alignItems: 'center', flex: 1 }}>
                   <UTText variant="label">Upload Schedule</UTText>

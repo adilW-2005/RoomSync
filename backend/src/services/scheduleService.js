@@ -144,7 +144,11 @@ async function normalizeEvents(raw) {
 		const start24 = to24h(r.start_time);
 		const end24 = to24h(r.end_time);
 		daysExpanded = applyDayHeuristics(daysExpanded, start24, end24);
-		const building = String(r.building || '').toUpperCase().trim();
+		let building = String(r.building || '').toUpperCase().trim();
+		// If building is unrecognized or missing, leave empty to be treated as online/no directions
+		if (!building || building.length < 2) {
+			building = '';
+		}
 		const loc = null; // resolved asynchronously below
 		return {
 			course: String(r.course || '').trim(),
@@ -155,7 +159,7 @@ async function normalizeEvents(raw) {
 			end_time: end24 || null,
 			location: loc || undefined,
 		};
-	}).filter(e => e.course && e.building && e.days?.length && e.start_time && e.end_time);
+	}).filter(e => e.course && e.days?.length && e.start_time && e.end_time);
 	// Second pass: aggregate identical meeting slots and union their days (restores M/W in MWF, etc.)
 	const dayOrder = new Map([['M',0],['T',1],['W',2],['Th',3],['F',4]]);
 	const groups = new Map();
@@ -183,7 +187,7 @@ async function normalizeEvents(raw) {
 	const codeToLoc = {};
 	await Promise.all(uniqueBuildings.map(async (code) => { codeToLoc[code] = await resolveBuildingLocation(code); }));
 	for (const a of aggregated) {
-		const loc = codeToLoc[a.building];
+		const loc = a.building ? codeToLoc[a.building] : null;
 		if (loc) a.location = loc;
 	}
 	return aggregated;
