@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const { loadEnv } = require('../config/env');
+const { uploadBase64ToCloudinary } = require('../services/cloudinaryService');
 const User = require('../models/User');
 const Group = require('../models/Group');
 const Chore = require('../models/Chore');
@@ -15,9 +16,51 @@ const Notification = require('../models/Notification');
 const Hangout = require('../models/Hangout');
 const ScheduleEvent = require('../models/ScheduleEvent');
 
+// Test Cloudinary connection
+async function testCloudinary() {
+  try {
+    console.log('🧪 Testing Cloudinary connection...');
+    // Create a simple test image (1x1 pixel red dot in base64)
+    const testImageBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+    const uploadedUrl = await uploadBase64ToCloudinary(testImageBase64, 'test');
+    console.log('✅ Cloudinary test successful!', uploadedUrl);
+    return true;
+  } catch (error) {
+    console.error('❌ Cloudinary test failed:', error.message);
+    return false;
+  }
+}
+
+// Sample avatar images (placeholder URLs that work)
+const sampleAvatars = [
+  'https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg',
+  'https://res.cloudinary.com/demo/image/upload/v1571218039/samples/people/jazz.jpg',
+  'https://res.cloudinary.com/demo/image/upload/v1571218039/samples/people/kitchen-bar.jpg'
+];
+
+// Sample listing photos
+const sampleListingPhotos = [
+  'https://res.cloudinary.com/demo/image/upload/v1571218039/samples/ecommerce/leather-bag-gray.jpg',
+  'https://res.cloudinary.com/demo/image/upload/v1571218039/samples/ecommerce/accessories-bag.jpg',
+  'https://res.cloudinary.com/demo/image/upload/v1571218039/samples/ecommerce/shoes.jpg',
+  'https://res.cloudinary.com/demo/image/upload/v1571218039/samples/food/dessert.jpg'
+];
+
+// Sample rating photos
+const sampleRatingPhotos = [
+  'https://res.cloudinary.com/demo/image/upload/v1571218039/samples/landscapes/architecture-signs.jpg',
+  'https://res.cloudinary.com/demo/image/upload/v1571218039/samples/landscapes/beach-boat.jpg'
+];
+
 async function runSeed(options = {}) {
   const env = loadEnv();
   await mongoose.connect(env.MONGO_URI);
+
+  // Test Cloudinary first
+  const cloudinaryWorking = await testCloudinary();
+  if (!cloudinaryWorking) {
+    console.log('⚠️  Cloudinary not configured properly, using placeholder images');
+  }
 
   const wipeAll = Boolean(options.wipeAll);
   try {
@@ -50,17 +93,26 @@ async function runSeed(options = {}) {
     await User.deleteMany({ username: { $in: demoUsers.map((u) => u.username) } });
     await Group.deleteMany({ code: groupCode });
 
-    // Create users with passwords
+    // Create users with passwords and avatars
     const password = 'test1234';
+    console.log('👤 Creating users with avatars...');
     const [alex, blair, casey] = await Promise.all(
-      demoUsers.map(async (info) => User.create({
+      demoUsers.map(async (info, index) => User.create({
         email: info.email,
         passwordHash: await bcrypt.hash(password, 10),
         name: info.name,
         username: info.username,
         showContact: true,
+        avatarUrl: sampleAvatars[index], // Add avatar images
+        bio: index === 0 ? 'CS major, loves coding and coffee ☕' : 
+             index === 1 ? 'Business student, always up for adventures 🌟' : 
+             'Pre-med student, plant enthusiast 🌱',
+        contact: index === 0 ? '@alex_longhorn' : 
+                 index === 1 ? '@blair_bevo' : 
+                 '@casey_tower'
       }))
     );
+    console.log('✅ Users created with avatars and bios');
 
     // Create a group and add all three users
     const group = await Group.create({ name: groupName, code: groupCode, members: [alex._id, blair._id, casey._id], memberRoles: [{ user: alex._id, role: 'owner' }] });
@@ -138,6 +190,7 @@ async function runSeed(options = {}) {
     });
 
     // Expenses: equal split for groceries, custom split for utilities
+    console.log('💰 Creating expenses with receipt photos...');
     const groceries = await Expense.create({
       groupId: group._id,
       payerId: alex._id,
@@ -149,6 +202,7 @@ async function runSeed(options = {}) {
         { userId: casey._id, amount: 30 },
       ],
       notes: 'Groceries',
+      receiptUrl: 'https://res.cloudinary.com/demo/image/upload/v1571218039/samples/food/spices.jpg', // Sample receipt
     });
     const utilities = await Expense.create({
       groupId: group._id,
@@ -161,6 +215,7 @@ async function runSeed(options = {}) {
         { userId: casey._id, amount: 30 },
       ],
       notes: 'Utilities',
+      receiptUrl: 'https://res.cloudinary.com/demo/image/upload/v1571218039/samples/ecommerce/car-interior-design.jpg', // Sample receipt
     });
 
     // Inventory: mixed shared and personal, one with expiry
@@ -176,7 +231,7 @@ async function runSeed(options = {}) {
       title: 'Summer Sublet at Waterloo',
       description: '1 bed available, June-August',
       price: 1200,
-      photos: [],
+      photos: [sampleListingPhotos[0]], // Use sample photos
       loc: { lat: 30.2816, lng: -97.7420 },
       availableFrom: new Date(now.getTime() + 20 * 24 * 60 * 60 * 1000),
       availableTo: new Date(now.getTime() + 80 * 24 * 60 * 60 * 1000),
@@ -188,7 +243,7 @@ async function runSeed(options = {}) {
       title: 'IKEA Desk',
       description: 'Like new, pickup near campus',
       price: 60,
-      photos: [],
+      photos: [sampleListingPhotos[1]], // Use sample photos
       status: 'available',
     });
     const book = await Listing.create({
@@ -197,7 +252,7 @@ async function runSeed(options = {}) {
       title: 'CS Textbook',
       description: 'Used but in good condition',
       price: 35,
-      photos: [],
+      photos: [sampleListingPhotos[2]], // Use sample photos
       status: 'available',
     });
 
@@ -221,8 +276,28 @@ async function runSeed(options = {}) {
         { userId: blair._id, unreadCount: 1, lastReadAt: new Date(now.getTime() - 3 * 60 * 60 * 1000) },
       ],
     });
-    const listMsg = await Message.create({ conversationId: listConvo._id, listingId: desk._id, fromUserId: alex._id, toUserId: blair._id, text: 'Hi! Is the IKEA desk still available?', photos: [], createdAt: new Date(now.getTime() - 10 * 60 * 1000) });
-    listConvo.lastMessage = { text: listMsg.text, photos: [], fromUserId: alex._id, createdAt: listMsg.createdAt };
+    const listMsg = await Message.create({ 
+      conversationId: listConvo._id, 
+      listingId: desk._id, 
+      fromUserId: alex._id, 
+      toUserId: blair._id, 
+      text: 'Hi! Is the IKEA desk still available?', 
+      photos: [], 
+      createdAt: new Date(now.getTime() - 10 * 60 * 1000) 
+    });
+    
+    // Add a message with photo
+    await Message.create({ 
+      conversationId: listConvo._id, 
+      listingId: desk._id, 
+      fromUserId: blair._id, 
+      toUserId: alex._id, 
+      text: 'Yes! Here\'s a better photo of it:', 
+      photos: [sampleListingPhotos[3]], 
+      createdAt: new Date(now.getTime() - 5 * 60 * 1000) 
+    });
+    
+    listConvo.lastMessage = { text: 'Yes! Here\'s a better photo of it:', photos: [sampleListingPhotos[3]], fromUserId: blair._id, createdAt: new Date(now.getTime() - 5 * 60 * 1000) };
     await listConvo.save();
 
     // Notifications: seed a few sample notifications per user across categories
@@ -282,7 +357,7 @@ async function runSeed(options = {}) {
       pros: ['Location', 'Community'],
       cons: ['Noise'],
       tips: 'Bring earplugs',
-      photos: [],
+      photos: [sampleRatingPhotos[0]], // Use sample photos
     });
     await Rating.create({
       authorId: blair._id,
@@ -293,7 +368,7 @@ async function runSeed(options = {}) {
       pros: ['Modern'],
       cons: ['Pricey'],
       tips: 'Apply early',
-      photos: [],
+      photos: [sampleRatingPhotos[1]], // Use sample photos
     });
 
     // Hangouts: simple proposal with options and one message
@@ -328,6 +403,13 @@ async function runSeed(options = {}) {
     }
 
     // eslint-disable-next-line no-console
+    console.log('✅ Seed complete with images!');
+    console.log('📸 Added images to:');
+    console.log('  - 3 user avatars and bios');
+    console.log('  - 3 marketplace listing photos');
+    console.log('  - 2 rating photos');
+    console.log('  - 2 expense receipt photos');
+    console.log('  - 1 message photo');
     console.log('Seeded demo data:', {
       users: [alex.toJSON().email, blair.toJSON().email, casey.toJSON().email],
       group: group.toJSON().name,

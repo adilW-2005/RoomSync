@@ -5,8 +5,17 @@ let socket = null;
 let isConnecting = false;
 
 function resolveWsUrl() {
+  // Use explicit env vars first
   if (process.env.EXPO_PUBLIC_WS_URL) return process.env.EXPO_PUBLIC_WS_URL;
   if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  
+  // For development stability, always use localhost:4000
+  // The dynamic hostUri resolution was causing connection issues
+  if (__DEV__) {
+    return 'http://localhost:4000';
+  }
+  
+  // Keep dynamic resolution for production builds
   const hostUri = Constants?.expoConfig?.hostUri || Constants?.manifest?.hostUri || '';
   const host = hostUri.split(':')[0];
   const isIp = /^\d+\.\d+\.\d+\.\d+$/.test(host);

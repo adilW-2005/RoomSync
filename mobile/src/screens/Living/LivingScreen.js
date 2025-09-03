@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { View, StyleSheet, Pressable, Linking, Platform } from 'react-native';
+import { View, StyleSheet, Pressable, Linking, Platform, Modal, ScrollView, Alert, TextInput } from 'react-native';
 import { MapView, Marker, Callout, Polyline } from '../../components/MapShim';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +13,7 @@ import useGroupStore from '../../state/useGroupStore';
 import useMemberStore from '../../state/useMemberStore';
 import useScheduleStore from '../../state/useScheduleStore';
 import { connectSocket, joinGroupRoom, onLocationUpdate, getSocket } from '../../lib/socket';
-import { NavAPI } from '../../api/sdk';
+import { NavAPI, ScheduleAPI } from '../../api/sdk';
 
 function decodePolyline(encoded) {
   if (!encoded) return [];
@@ -38,10 +38,14 @@ export default function LivingScreen({ navigation }) {
   const [userLoc, setUserLoc] = useState(null); // { latitude, longitude }
   const [guiding, setGuiding] = useState(false);
   const [routeCoords, setRouteCoords] = useState([]); // decoded polyline
+  const [scheduleModal, setScheduleModal] = useState(false);
+  const [scheduleEvents, setScheduleEvents] = useState([]);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [editForm, setEditForm] = useState({});
   const { token } = useAuthStore();
   const { currentGroup } = useGroupStore();
   const { membersById, fetchCurrentGroupMembers } = useMemberStore();
-  const { nextClass, etaMinutes, refreshNext, ui, hydrate, savePrefs } = useScheduleStore();
+  const { nextClass, etaMinutes, refreshNext, ui, hydrate, savePrefs, shouldShowScheduleFlow } = useScheduleStore();
 
   // Hydrate schedule UI prefs (show/hide next card)
   useEffect(() => { hydrate?.(); }, []);
@@ -187,6 +191,205 @@ export default function LivingScreen({ navigation }) {
     if (!guiding) refreshNext();
   };
 
+  const loadSchedule = async () => {
+    try {
+      const result = await ScheduleAPI.getAll();
+      setScheduleEvents(result.events || []);
+    } catch (e) {
+      console.error('Failed to load schedule:', e);
+    }
+  };
+
+  const deleteScheduleEvent = async (index) => {
+    try {
+      const updatedEvents = scheduleEvents.filter((_, i) => i !== index);
+      await ScheduleAPI.saveAll(updatedEvents);
+      setScheduleEvents(updatedEvents);
+      refreshNext();
+      Alert.alert('Success', 'Class deleted');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to delete class');
+    }
+  };
+
+  const startEditingEvent = (index) => {
+    const event = scheduleEvents[index];
+    setEditingEvent(index);
+    setEditForm({
+      course: event.course || '',
+      building: event.building || '',
+      room: event.room || '',
+      start_time: event.start_time || '',
+      end_time: event.end_time || '',
+      days: Array.isArray(event.days) ? event.days.join('') : ''
+    });
+  };
+
+  const saveEditedEvent = async () => {
+    try {
+      if (!editForm.course || !editForm.building || !editForm.start_time || !editForm.end_time || !editForm.days) {
+        Alert.alert('Error', 'Please fill in all required fields');
+        return;
+      }
+
+      const updatedEvents = [...scheduleEvents];
+      updatedEvents[editingEvent] = {
+        ...scheduleEvents[editingEvent],
+        course: editForm.course,
+        building: editForm.building.toUpperCase(),
+        room: editForm.room,
+        start_time: editForm.start_time,
+        end_time: editForm.end_time,
+        days: editForm.days.split('').filter(d => ['M', 'T', 'W', 'Th', 'F'].includes(d))
+      };
+
+      await ScheduleAPI.saveAll(updatedEvents);
+      setScheduleEvents(updatedEvents);
+      setEditingEvent(null);
+      setEditForm({});
+      refreshNext();
+      Alert.alert('Success', 'Class updated');
+    } catch (e) {
+      Alert.alert('Error', 'Failed to update class');
+    }
+  };
+
+  const cancelEditing = () => {
+    setEditingEvent(null);
+    setEditForm({});
+  };
+
+  const openScheduleModal = async () => {
+    await loadSchedule();
+    setScheduleModal(true);
+  };
+
+  const renderScheduleModal = () => (
+    <Modal visible={scheduleModal} animationType="slide" transparent>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <UTText variant="title" style={{ flex: 1 }}>My Schedule</UTText>
+            <Pressable onPress={() => setScheduleModal(false)}>
+              <Ionicons name="close" size={24} color={colors.burntOrange} />
+            </Pressable>
+          </View>
+          
+          <ScrollView style={{ maxHeight: 400 }}>
+            {scheduleEvents.length > 0 ? (
+              scheduleEvents.map((event, index) => (
+                <View key={index} style={styles.scheduleItem}>
+                  {editingEvent === index ? (
+                    // Edit mode
+                    <View style={{ flex: 1 }}>
+                      <TextInput
+                        value={editForm.course}
+                        onChangeText={(text) => setEditForm({...editForm, course: text})}
+                        placeholder="Course (e.g., CS 311)"
+                        style={styles.editInput}
+                      />
+                      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                        <TextInput
+                          value={editForm.days}
+                          onChangeText={(text) => setEditForm({...editForm, days: text})}
+                          placeholder="Days (e.g., MWF)"
+                          style={[styles.editInput, { flex: 1 }]}
+                        />
+                        <TextInput
+                          value={editForm.start_time}
+                          onChangeText={(text) => setEditForm({...editForm, start_time: text})}
+                          placeholder="Start (14:00)"
+                          style={[styles.editInput, { flex: 1 }]}
+                        />
+                        <TextInput
+                          value={editForm.end_time}
+                          onChangeText={(text) => setEditForm({...editForm, end_time: text})}
+                          placeholder="End (15:00)"
+                          style={[styles.editInput, { flex: 1 }]}
+                        />
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                        <TextInput
+                          value={editForm.building}
+                          onChangeText={(text) => setEditForm({...editForm, building: text})}
+                          placeholder="Building (WEL)"
+                          style={[styles.editInput, { flex: 1 }]}
+                        />
+                        <TextInput
+                          value={editForm.room}
+                          onChangeText={(text) => setEditForm({...editForm, room: text})}
+                          placeholder="Room (2.316)"
+                          style={[styles.editInput, { flex: 1 }]}
+                        />
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm }}>
+                        <Pressable onPress={saveEditedEvent} style={[styles.actionBtn, { backgroundColor: '#2ecc71' }]}>
+                          <UTText style={{ color: colors.white }}>Save</UTText>
+                        </Pressable>
+                        <Pressable onPress={cancelEditing} style={[styles.actionBtn, { backgroundColor: colors.slate }]}>
+                          <UTText style={{ color: colors.white }}>Cancel</UTText>
+                        </Pressable>
+                      </View>
+                    </View>
+                  ) : (
+                    // View mode
+                    <>
+                      <View style={{ flex: 1 }}>
+                        <UTText variant="subtitle">{event.course}</UTText>
+                        <UTText variant="meta">
+                          {event.days.join('')} • {event.start_time} - {event.end_time}
+                        </UTText>
+                        <UTText variant="meta">
+                          {event.building} {event.room || ''}
+                        </UTText>
+                      </View>
+                      <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+                        <Pressable onPress={() => startEditingEvent(index)} style={styles.editBtn}>
+                          <Ionicons name="pencil-outline" size={18} color={colors.burntOrange} />
+                        </Pressable>
+                        <Pressable 
+                          onPress={() => {
+                            Alert.alert(
+                              'Delete Class',
+                              `Remove ${event.course}?`,
+                              [
+                                { text: 'Cancel', style: 'cancel' },
+                                { text: 'Delete', style: 'destructive', onPress: () => deleteScheduleEvent(index) }
+                              ]
+                            );
+                          }}
+                          style={styles.deleteBtn}
+                        >
+                          <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+                        </Pressable>
+                      </View>
+                    </>
+                  )}
+                </View>
+              ))
+            ) : (
+              <View style={{ alignItems: 'center', padding: spacing.xl }}>
+                <UTText variant="body" style={{ textAlign: 'center', color: colors.slate }}>
+                  No schedule uploaded yet
+                </UTText>
+              </View>
+            )}
+          </ScrollView>
+          
+          <View style={{ marginTop: spacing.md }}>
+            <UTButton 
+              title="Upload New Schedule" 
+              onPress={() => {
+                setScheduleModal(false);
+                navigation.navigate('UploadSchedule');
+              }}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.container}>
       <View style={{ padding: spacing.md, paddingBottom: spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -249,11 +452,85 @@ export default function LivingScreen({ navigation }) {
           </Pressable>
         </View>
       )}
+
+      {/* Schedule FAB */}
+      <View style={{ position: 'absolute', top: 60, right: spacing.lg }}>
+        <Pressable onPress={openScheduleModal} style={styles.scheduleFab}>
+          <Ionicons name="calendar-outline" size={20} color={colors.white} />
+        </Pressable>
+      </View>
+
+      {renderScheduleModal()}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  map: { flex: 1 }
+  map: { flex: 1 },
+  scheduleFab: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.burntOrange,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 5,
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  modalContainer: {
+    backgroundColor: colors.white,
+    borderRadius: 12,
+    padding: spacing.lg,
+    width: '100%',
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+  },
+  scheduleItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  deleteBtn: {
+    padding: spacing.sm,
+    borderRadius: 8,
+    backgroundColor: '#fff5f5',
+  },
+  editBtn: {
+    padding: spacing.sm,
+    borderRadius: 8,
+    backgroundColor: '#fff7ed',
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 8,
+    padding: spacing.sm,
+    marginBottom: spacing.xs,
+    backgroundColor: colors.white,
+    fontSize: 14,
+  },
+  actionBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+    alignItems: 'center',
+    flex: 1,
+  },
 }); 

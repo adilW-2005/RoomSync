@@ -137,11 +137,13 @@ export default function DashboardScreen({ navigation }) {
         <View>
           <View style={{ flexDirection: 'row', gap: 12, marginBottom: ROW_GAP }}>
             <FeatureCard chipSize={42} minHeight={targetCardH} icon="list" title="Chores" subtitle="Next: None" onPress={() => navigation.navigate('Chores')} style={{ flex: 1 }} />
-            <FeatureCard chipSize={42} minHeight={targetCardH} icon="calendar" title="Events" subtitle="This week" onPress={() => navigation.navigate('Events')} style={{ flex: 1 }} />
+           
+            <FeatureCard chipSize={42} minHeight={targetCardH} icon="cash" title="Expenses" subtitle="Owed to You: $0" onPress={() => navigation.navigate('Expenses')} style={{ flex: 1 }} />
           </View>
           <View style={{ flexDirection: 'row', gap: 12 }}>
-            <FeatureCard chipSize={42} minHeight={targetCardH} icon="cube" title="Inventory" subtitle="House items" onPress={() => navigation.navigate('Inventory')} style={{ flex: 1 }} />
-            <FeatureCard chipSize={42} minHeight={targetCardH} icon="cash" title="Expenses" subtitle="Owed to You: $0" onPress={() => navigation.navigate('Expenses')} style={{ flex: 1 }} />
+          <FeatureCard chipSize={42} minHeight={targetCardH} icon="calendar" title="Events" subtitle="This week" onPress={() => navigation.navigate('Events')} style={{ flex: 1 }} />
+            
+          <FeatureCard chipSize={42} minHeight={targetCardH} icon="cube" title="Inventory" subtitle="House items" onPress={() => navigation.navigate('Inventory')} style={{ flex: 1 }} />
           </View>
         </View>
       </ScrollView>

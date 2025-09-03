@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, TouchableOpacity, ImageBackground, Dimensions, Platform, ScrollView, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, TouchableOpacity, ImageBackground, Dimensions, Platform, ScrollView, Alert, Modal, Pressable, Image, SafeAreaView } from 'react-native';
 import { MapView, Marker } from '../../components/MapShim';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import UTText from '../../components/UTText';
 import UTCard from '../../components/UTCard';
 import PressableScale from '../../components/PressableScale';
 import UTButton from '../../components/UTButton';
+import ExpandableImage from '../../components/ImageViewer';
 import { spacing, colors, radii } from '../../styles/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ensureSocket } from '../../lib/socket';
@@ -20,6 +21,7 @@ export default function ListingDetailScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const { token, user } = useAuthStore.getState();
   const { openOrCreateListing } = useMessageStore.getState();
+  const [imageModalVisible, setImageModalVisible] = useState(false);
 
   const onBack = () => navigation.goBack();
   const onFavorite = () => {};
@@ -43,9 +45,10 @@ export default function ListingDetailScreen({ navigation, route }) {
       <ScrollView contentContainerStyle={{ paddingBottom: 28 }} showsVerticalScrollIndicator={false}>
         <View style={{ paddingTop: insets.top }}>
           <View style={styles.heroWrap}>
-            <ImageBackground source={{ uri: listing.photos?.[0] }} style={styles.hero} imageStyle={{ borderBottomLeftRadius: 26, borderBottomRightRadius: 26 }}>
-              <LinearGradient colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0.1)", "transparent"]} style={StyleSheet.absoluteFill} />
-              <View style={styles.heroActions}>
+            <TouchableOpacity onPress={() => setImageModalVisible(true)} activeOpacity={1}>
+              <ImageBackground source={{ uri: listing.photos?.[0] }} style={styles.hero} imageStyle={{ borderBottomLeftRadius: 26, borderBottomRightRadius: 26 }}>
+                <LinearGradient colors={["rgba(0,0,0,0.35)", "rgba(0,0,0,0.1)", "transparent"]} style={StyleSheet.absoluteFill} />
+                <View style={styles.heroActions}>
                 <PressableScale onPress={onBack} style={styles.roundBtn} accessibilityLabel="Back">
                   <Ionicons name="chevron-back" size={22} color={colors.burntOrange} />
                 </PressableScale>
@@ -61,6 +64,7 @@ export default function ListingDetailScreen({ navigation, route }) {
                 </PressableScale>
               </View>
             </ImageBackground>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -114,6 +118,30 @@ export default function ListingDetailScreen({ navigation, route }) {
           <UTButton title="Chat with Seller" onPress={onContact} style={styles.ctaBtn} textStyle={{ fontSize: 16 }} />
         </View>
       </ScrollView>
+      
+      {/* Image Modal */}
+      <Modal
+        visible={imageModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setImageModalVisible(false)}
+      >
+        <SafeAreaView style={styles.imageModalContainer}>
+          <View style={styles.imageModalBackdrop}>
+            <Pressable onPress={() => setImageModalVisible(false)} style={styles.imageModalCloseButton}>
+              <Ionicons name="close" size={30} color={colors.white} />
+            </Pressable>
+            
+            <Pressable onPress={() => setImageModalVisible(false)} style={styles.imageModalImageContainer}>
+              <Image 
+                source={{ uri: listing.photos?.[0] }} 
+                style={styles.imageModalFullImage}
+                resizeMode="contain"
+              />
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 }
@@ -147,5 +175,37 @@ const styles = StyleSheet.create({
   chip: { marginLeft: 10, height: 24, paddingHorizontal: 12, borderRadius: 12, backgroundColor: '#FFF6EC', alignItems: 'center', justifyContent: 'center' },
   map: { height: 130, borderRadius: 12, marginTop: 10 }, 
   ctaBtn: { backgroundColor: colors.burntOrange, paddingVertical: 14, borderRadius: 16, alignItems: 'center', justifyContent: 'center', flexDirection: 'row', shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
-  ctaText: { color: '#fff' }
+  ctaText: { color: '#fff' },
+  imageModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+  },
+  imageModalBackdrop: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalCloseButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 1,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageModalImageContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+  },
+  imageModalFullImage: {
+    width: SCREEN_W,
+    height: SCREEN_W,
+    maxWidth: SCREEN_W,
+  },
 }); 

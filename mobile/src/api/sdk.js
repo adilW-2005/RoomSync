@@ -106,6 +106,20 @@ export const sdk = {
 		async get() { return api.get('/notification_prefs'); },
 		async update(payload) { return api.put('/notification_prefs', payload); },
 	},
+	users: {
+		async getProfile() {
+			return api.get('/users/me');
+		},
+		async updateProfile(updates) {
+			return api.patch('/users/me', updates);
+		},
+		async updateNotificationPrefs(prefs) {
+			return api.post('/users/me/notification-prefs', prefs);
+		},
+		async deleteAccount() {
+			return api.delete('/users/me');
+		},
+	},
 };
 
 export async function getOrCreateDM(otherUserId) {
@@ -146,6 +160,9 @@ export const ScheduleAPI = {
 	},
 	getNext: async () => {
 		return await api.get('/schedule/next');
+	},
+	getAll: async () => {
+		return await api.get('/schedule');
 	},
 	saveAll: async (events) => {
 		return await api.post('/schedule/save', { events });

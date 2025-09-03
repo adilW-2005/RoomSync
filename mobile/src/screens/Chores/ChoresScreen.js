@@ -29,7 +29,17 @@ function isSameDay(a, b) { return new Date(a).toDateString() === new Date(b).toD
 function keyFor(date) { const d = new Date(date); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
 
 function buildChorePingBody(chore) {
-	try { return `Reminder: ${chore.title} due ${new Date(chore.dueAt).toLocaleDateString(undefined, { weekday: 'short' })}`; } catch (_) { return `Reminder: ${chore.title}`; }
+	try { 
+		const dueDate = new Date(chore.dueAt);
+		const dateStr = dueDate.toLocaleDateString(undefined, { 
+			weekday: 'long', 
+			month: 'short', 
+			day: 'numeric' 
+		});
+		return `Reminder: ${chore.title} due ${dateStr}`;
+	} catch (_) { 
+		return `Reminder: ${chore.title}`; 
+	}
 }
 
 export default function ChoresScreen() {
@@ -291,7 +301,7 @@ export default function ChoresScreen() {
 												<View style={styles.avatarSmall}><UTText variant="subtitle" style={{ color: colors.burntOrange }}>{(c.title || '?').slice(0,1)}</UTText></View>
 												<View>
 													<UTText variant="body">{c.title}</UTText>
-													<UTText variant="meta">Due {new Date(c.dueAt).toLocaleDateString(undefined, { weekday: 'short' })}</UTText>
+													<UTText variant="meta">Due {new Date(c.dueAt).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</UTText>
 												</View>
 											</PressableScale>
 										))

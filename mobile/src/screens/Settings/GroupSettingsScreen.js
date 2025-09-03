@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TextInput, TouchableOpacity, FlatList, Alert, SafeAreaView } from 'react-native';
+import { View, StyleSheet, TextInput, TouchableOpacity, FlatList, Alert, SafeAreaView, ScrollView } from 'react-native';
 import useGroupStore from '../../state/useGroupStore';
 import api from '../../api/client';
 import UTText from '../../components/UTText';
@@ -134,7 +134,7 @@ export default function GroupSettingsScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <GradientHeader title="Group Settings" rightIcon="options-outline" />
-      <View style={styles.container}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl }}>
         <View style={styles.cardShadow}>
           <LinearGradient colors={["#FFF9F2", "#FFFFFF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.gradientCard}>
             <UTCard style={{ backgroundColor: 'transparent' }}>
@@ -197,13 +197,12 @@ export default function GroupSettingsScreen() {
             </UTCard>
           </LinearGradient>
         </View>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.white, paddingHorizontal: spacing.lg },
   input: { borderWidth: 1, borderColor: '#E5E5EA', borderRadius: 12, padding: 12, backgroundColor: '#FFFFFF' },
   memberRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: spacing.xs },
   memberAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#EFEFF4', alignItems: 'center', justifyContent: 'center' },

@@ -34,7 +34,25 @@ export default function SettingsScreen({ navigation }) {
       <UTCard>
         <UTText variant="subtitle">Account</UTText>
         <UTText variant="meta" style={{ marginTop: spacing.xs }}>{user?.email}</UTText>
-        <UTButton title="Sign Out" onPress={logout} style={{ marginTop: spacing.md }} />
+        <UTButton 
+          title="Account Settings" 
+          onPress={() => navigation.navigate('AccountSettings')} 
+          style={{ marginTop: spacing.md }} 
+        />
+        <UTButton title="Sign Out" variant="secondary" onPress={logout} style={{ marginTop: spacing.sm }} />
+      </UTCard>
+
+      <UTCard style={{ marginTop: spacing.md }}>
+        <UTText variant="subtitle">Group</UTText>
+        <UTText variant="meta" style={{ marginTop: spacing.xs }}>
+          {currentGroup?.name || 'No group selected'}
+        </UTText>
+        <UTButton 
+          title="Group Settings" 
+          variant="secondary" 
+          onPress={() => navigation.navigate('GroupSettings')} 
+          style={{ marginTop: spacing.md }} 
+        />
       </UTCard>
 
       <UTCard style={{ marginTop: spacing.md }}>

@@ -10,6 +10,7 @@ import MarketplaceScreen from '../screens/Marketplace/MarketplaceScreen';
 import ListingDetailScreen from '../screens/Marketplace/ListingDetailScreen';
 import InventoryScreen from '../screens/Inventory/InventoryScreen';
 import SettingsScreen from '../screens/Settings/SettingsScreen';
+import AccountSettingsScreen from '../screens/Settings/AccountSettingsScreen';
 import RatingsListScreen from '../screens/Ratings/RatingsListScreen';
 import RatingsDetailScreen from '../screens/Ratings/RatingsDetailScreen';
 import HangoutsScreen from '../screens/Hangouts/HangoutsScreen';
@@ -53,7 +54,8 @@ function SettingsStack() {
   return (
     <Stack.Navigator screenOptions={{ animation: 'fade' }}>
       <Stack.Screen name="SettingsHome" component={SettingsScreen} options={{ title: 'Settings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
-      <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} options={{ title: 'Group Settings', headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' } }} />
+      <Stack.Screen name="AccountSettings" component={AccountSettingsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="GroupSettings" component={GroupSettingsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

@@ -214,19 +214,41 @@ function getNextAcrossWeek(nowDate, events, tz = 'America/Chicago') {
 	if (!Array.isArray(events) || events.length === 0) return null;
 	const weekdays = ['Su','M','T','W','Th','F','Sa'];
 	const now = dayjs(nowDate).tz(tz);
+	
+	// Find all upcoming classes across the week
+	const upcomingClasses = [];
+	
 	for (let offset = 0; offset < 7; offset += 1) {
 		const d = now.add(offset, 'day');
 		const dayToken = weekdays[d.day()];
-		const todays = events.filter((e) => e.days.includes(dayToken));
-		if (todays.length === 0) continue;
-		const nowStr = offset === 0 ? `${String(d.hour()).padStart(2,'0')}:${String(d.minute()).padStart(2,'0')}` : '00:00';
-		const next = todays
-			.map((e) => ({ ...e, startStr: e.start_time }))
-			.filter((e) => e.startStr >= nowStr)
-			.sort((a, b) => a.startStr.localeCompare(b.startStr))[0];
-		if (next) return next;
+		const dayClasses = events.filter((e) => e.days.includes(dayToken));
+		
+		for (const classEvent of dayClasses) {
+			// Create a full datetime for this class
+			const [hours, minutes] = classEvent.start_time.split(':').map(Number);
+			const classDateTime = d.hour(hours).minute(minutes).second(0);
+			
+			// Only include if it's in the future
+			if (classDateTime.isAfter(now)) {
+				upcomingClasses.push({
+					...classEvent,
+					datetime: classDateTime,
+					dayToken,
+					startStr: classEvent.start_time
+				});
+			}
+		}
 	}
-	return null;
+	
+	// Sort by datetime and return the earliest
+	if (upcomingClasses.length === 0) return null;
+	
+	upcomingClasses.sort((a, b) => a.datetime.valueOf() - b.datetime.valueOf());
+	const next = upcomingClasses[0];
+	
+	// Remove the datetime field before returning
+	const { datetime, ...result } = next;
+	return result;
 }
 
 async function getNextClass(userId) {

@@ -11,7 +11,7 @@ const useScheduleStore = create((set, get) => ({
 	etaMinutes: null,
 	refreshing: false,
 	ui: { showNextCard: true },
-	leadTimes: [30, 10], // minutes before start
+	leadTimes: [30, 15, 10], // minutes before start
 	scheduledIds: [], // local notification identifiers
 	warningLate: false,
 	async hydrate() {
@@ -77,8 +77,12 @@ const useScheduleStore = create((set, get) => ({
 				const fireAt = new Date(start.getTime() - mins * 60000);
 				if (fireAt.getTime() <= Date.now()) continue;
 				try {
+					const etaText = get().etaMinutes != null ? ` • ${get().etaMinutes} min ETA if you leave now` : '';
 					const id = await Notifications.scheduleNotificationAsync({
-						content: { title: 'Class reminder', body: `${next.course} at ${next.start_time} in ${next.building} ${next.room || ''}` },
+						content: { 
+							title: `Class in ${mins} minutes`, 
+							body: `${next.course} at ${next.start_time} in ${next.building} ${next.room || ''}${etaText}` 
+						},
 						trigger: { date: fireAt },
 					});
 					newIds.push(id);
@@ -86,6 +90,19 @@ const useScheduleStore = create((set, get) => ({
 			}
 			set({ scheduledIds: newIds });
 		} catch (_) {}
+	},
+	// Helper to check if we should show schedule UI (within 1 hour of class)
+	shouldShowScheduleFlow() {
+		const next = get().nextClass;
+		if (!next?.start_time) return false;
+		try {
+			const [h, m] = String(next.start_time).split(':').map((x) => parseInt(x, 10));
+			const start = new Date(); start.setHours(h, m, 0, 0);
+			const minsUntil = Math.max(0, Math.floor((start.getTime() - Date.now()) / 60000));
+			return minsUntil <= 60; // Show only within 1 hour
+		} catch (_) { 
+			return false; 
+		}
 	},
 }));
 

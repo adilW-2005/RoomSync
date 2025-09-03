@@ -10,6 +10,7 @@ import FadeSlideIn from '../../components/FadeSlideIn';
 import useEventStore from '../../state/useEventStore';
 import useChoreStore from '../../state/useChoreStore';
 import useExpenseStore from '../../state/useExpenseStore';
+import useGroupStore from '../../state/useGroupStore';
 import { colors, spacing } from '../../styles/theme';
 import CreateEventModal from './CreateEventModal';
 
@@ -24,6 +25,20 @@ export default function EventsScreen({ navigation }) {
   const { events, fetchEvents, createEvent, loading: eventsLoading } = useEventStore();
   const { openChores, doneChores, fetchOpen, fetchDone, loading: choresLoading } = useChoreStore();
   const { expenses, fetchExpenses, loading: expensesLoading } = useExpenseStore();
+  const { currentGroup } = useGroupStore();
+
+  // Helper to get member names
+  const getMemberName = (userId) => {
+    const member = (currentGroup?.members || []).find(m => (m.id || m._id) === userId);
+    return member?.name || 'Unknown';
+  };
+
+  // Helper to format assignee names for chores
+  const formatAssignees = (assignees) => {
+    if (!Array.isArray(assignees) || assignees.length === 0) return 'Unassigned';
+    const names = assignees.map(getMemberName);
+    return names.join(', ');
+  };
 
   // Anchor week and selection
   const [anchor, setAnchor] = useState(() => new Date());
@@ -61,12 +76,24 @@ export default function EventsScreen({ navigation }) {
   const agenda = useMemo(() => {
     const items = [];
     (events || []).forEach((ev) => { const d = new Date(ev.startAt); if (d >= range.start && d <= range.end) items.push({ id: `event-${ev.id}`, type: 'event', date: d, title: ev.title, startAt: ev.startAt, endAt: ev.endAt, locationText: ev.locationText }); });
-    (openChores || []).forEach((c) => { const d = new Date(c.dueAt); if (d >= range.start && d <= range.end) items.push({ id: `chore-${c.id}`, type: 'chore', date: d, title: c.title, status: 'open' }); });
-    (doneChores || []).forEach((c) => { const d = new Date(c.dueAt || c.updatedAt || c.createdAt); if (d >= range.start && d <= range.end) items.push({ id: `chore-${c.id}`, type: 'chore', date: d, title: c.title, status: 'done' }); });
+    (openChores || []).forEach((c) => { 
+      const d = new Date(c.dueAt); 
+      if (d >= range.start && d <= range.end) {
+        const assignees = formatAssignees(c.assignees);
+        items.push({ id: `chore-${c.id}`, type: 'chore', date: d, title: c.title, status: 'open', assignees });
+      }
+    });
+    (doneChores || []).forEach((c) => { 
+      const d = new Date(c.dueAt || c.updatedAt || c.createdAt); 
+      if (d >= range.start && d <= range.end) {
+        const assignees = formatAssignees(c.assignees);
+        items.push({ id: `chore-${c.id}`, type: 'chore', date: d, title: c.title, status: 'done', assignees });
+      }
+    });
     (expenses || []).forEach((ex) => { const d = new Date(ex.createdAt); if (d >= range.start && d <= range.end) items.push({ id: `expense-${ex.id}`, type: 'expense', date: d, title: ex.notes || 'Expense', amount: ex.amount }); });
     items.sort((a, b) => a.date - b.date);
     return items;
-  }, [events, openChores, doneChores, expenses, range.start.getTime(), range.end.getTime()]);
+  }, [events, openChores, doneChores, expenses, range.start.getTime(), range.end.getTime(), currentGroup?.members]);
 
   // Week days row
   const weekDays = useMemo(() => {
@@ -210,7 +237,9 @@ export default function EventsScreen({ navigation }) {
                   ) : item.type === 'expense' ? (
                     <UTText variant="meta" style={{ marginTop: 2, color: colors.burntOrange }}>Due ${Number(item.amount || 0).toFixed(2)}</UTText>
                   ) : (
-                    <UTText variant="meta" style={{ marginTop: 2, color: colors.burntOrange }}>{item.status === 'done' ? 'Completed' : 'Pending'}</UTText>
+                    <UTText variant="meta" style={{ marginTop: 2, color: colors.burntOrange }}>
+                      {item.status === 'done' ? 'Completed' : 'Pending'} · {item.assignees}
+                    </UTText>
                   )}
                 </View>
               </View>

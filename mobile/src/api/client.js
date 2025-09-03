@@ -2,7 +2,17 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 
 function resolveBaseUrl() {
+  // Explicit fallback to localhost:4000 for development stability
+  // The dynamic hostUri resolution was causing timeouts in development
   if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  
+  // For now, always use localhost:4000 in development to avoid timing issues
+  // TODO: Re-enable dynamic resolution once Expo Constants timing is resolved
+  if (__DEV__) {
+    return 'http://localhost:4000';
+  }
+  
+  // Keep dynamic resolution for production builds
   const hostUri = Constants?.expoConfig?.hostUri || Constants?.manifest?.hostUri || '';
   const host = hostUri.split(':')[0];
   const isIp = /^\d+\.\d+\.\d+\.\d+$/.test(host);

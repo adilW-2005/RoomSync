@@ -83,6 +83,19 @@ const useAuthStore = create((set, get) => ({
     set({ firstRun: false });
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ user, token, firstRun: false }));
   },
+  async refreshUser() {
+    try {
+      const user = await api.get('/users/me');
+      const token = get().token;
+      const firstRun = get().firstRun;
+      set({ user });
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ user, token, firstRun }));
+      return user;
+    } catch (e) {
+      console.error('Failed to refresh user:', e);
+      throw e;
+    }
+  },
   async deleteAccount() {
     await api.delete('/users/me');
     setAccessToken(null);

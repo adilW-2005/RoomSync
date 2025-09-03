@@ -11,6 +11,7 @@ import SkeletonList from '../../components/SkeletonList';
 import EmptyState from '../../components/EmptyState';
 import FadeSlideIn from '../../components/FadeSlideIn';
 import PressableScale from '../../components/PressableScale';
+import ExpandableImage from '../../components/ImageViewer';
 import { spacing, colors, radii, shadows } from '../../styles/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -89,7 +90,7 @@ export default function MarketplaceScreen({ navigation, route }) {
               {item.photos?.[0] ? (
                 <View style={styles.leftImageOuter}>
                   <View style={styles.leftImageInner}>
-                    <Image source={{ uri: item.photos[0] }} style={styles.leftImage} resizeMode="cover" />
+                    <ExpandableImage source={{ uri: item.photos[0] }} style={styles.leftImage} resizeMode="cover" />
                   </View>
                 </View>
               ) : (

@@ -8,6 +8,7 @@ import UTCard from '../../components/UTCard';
 import UTButton from '../../components/UTButton';
 import FadeSlideIn from '../../components/FadeSlideIn';
 import GradientHeader from '../../components/GradientHeader';
+import ExpandableImage from '../../components/ImageViewer';
 import { LinearGradient } from 'expo-linear-gradient';
 import { spacing, colors, radii } from '../../styles/theme';
 
@@ -63,7 +64,7 @@ export default function RatingsDetailScreen({ route }) {
             {item.tips ? <UTText variant="body" style={{ marginTop: spacing.xs }}>{item.tips}</UTText> : null}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: spacing.sm }}>
               {(item.photos || []).map((u) => (
-                <Image key={u} source={{ uri: u }} style={{ width: 64, height: 64, borderRadius: 8 }} />
+                <ExpandableImage key={u} source={{ uri: u }} style={{ width: 64, height: 64, borderRadius: 8 }} />
               ))}
             </View>
             {user?.id === item.authorId ? (
@@ -95,7 +96,7 @@ export default function RatingsDetailScreen({ route }) {
               <TextInput style={styles.input} placeholder="Stars (1-5)" keyboardType="number-pad" value={stars} onChangeText={setStars} />
               <TextInput style={styles.input} placeholder="Tips (optional)" value={tips} onChangeText={setTips} />
               <View style={{ flexDirection: 'row', gap: spacing.md, alignItems: 'center', marginBottom: spacing.md }}>
-                {photosBase64.map((u, idx) => (<Image key={idx} source={{ uri: u }} style={{ width: 40, height: 40, borderRadius: 6 }} />))}
+                {photosBase64.map((u, idx) => (<ExpandableImage key={idx} source={{ uri: u }} style={{ width: 40, height: 40, borderRadius: 6 }} />))}
                 <UTButton title="Add Photos" variant="secondary" onPress={pickPhotos} />
               </View>
               <UTButton title="Submit" onPress={submit} />
