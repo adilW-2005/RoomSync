@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, ImageBackground, Dimensions, Platform, ScrollView, Alert } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
+import { MapView, Marker } from '../../components/MapShim';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import UTText from '../../components/UTText';
@@ -26,7 +26,7 @@ export default function ListingDetailScreen({ navigation, route }) {
   const onContact = async () => {
     try {
       const convo = await openOrCreateListing(listing.id, listing.sellerId);
-      navigation.navigate('Messages', { screen: 'Conversation', params: { conversationId: convo.id } });
+      navigation.navigate('Marketplace', { screen: 'Conversation', params: { conversationId: convo.id } });
     } catch (e) {
       try {
         const sock = ensureSocket(token);
@@ -35,6 +35,8 @@ export default function ListingDetailScreen({ navigation, route }) {
       Alert.alert('Error', e.message || 'Could not open chat');
     }
   };
+
+  const hasCoords = !!(listing?.loc?.lat && listing?.loc?.lng);
 
   return (
     <View style={styles.container}>
@@ -81,25 +83,31 @@ export default function ListingDetailScreen({ navigation, route }) {
             </UTCard>
           </LinearGradient>
 
+          {/* Location section always visible */}
+          <View style={{ marginTop: spacing.md }}>
+            <LinearGradient colors={["#FFF9F2", "#FFFFFF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: radii.card }}>
+              <UTCard style={{ backgroundColor: 'transparent' }}>
+                <UTText variant="subtitle" style={{ marginBottom: spacing.sm }}>Location</UTText>
+                {hasCoords ? (
+                  <MapView style={styles.map} initialRegion={{ latitude: listing.loc.lat, longitude: listing.loc.lng, latitudeDelta: 0.005, longitudeDelta: 0.005 }}>
+                    <Marker coordinate={{ latitude: listing.loc.lat, longitude: listing.loc.lng }} />
+                  </MapView>
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <Ionicons name="location-outline" size={16} color={colors.burntOrange} />
+                    <UTText variant="meta" style={{ marginLeft: 6 }}>{listing.locationName || 'Location unavailable'}</UTText>
+                  </View>
+                )}
+              </UTCard>
+            </LinearGradient>
+          </View>
+
           {listing.description ? (
             <View style={{ marginTop: spacing.md }}>
               <UTCard>
                 <UTText variant="subtitle" style={{ marginBottom: spacing.xs }}>Details</UTText>
                 <UTText variant="body">{listing.description}</UTText>
               </UTCard>
-            </View>
-          ) : null}
-
-          {listing.loc?.lat && listing.loc?.lng ? (
-            <View style={{ marginTop: spacing.md }}>
-              <LinearGradient colors={["#FFF9F2", "#FFFFFF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: radii.card }}>
-                <UTCard style={{ backgroundColor: 'transparent' }}>
-                  <UTText variant="subtitle" style={{ marginBottom: spacing.sm }}>Location</UTText>
-                  <MapView style={styles.map} initialRegion={{ latitude: listing.loc.lat, longitude: listing.loc.lng, latitudeDelta: 0.005, longitudeDelta: 0.005 }}>
-                    <Marker coordinate={{ latitude: listing.loc.lat, longitude: listing.loc.lng }} />
-                  </MapView>
-                </UTCard>
-              </LinearGradient>
             </View>
           ) : null}
 

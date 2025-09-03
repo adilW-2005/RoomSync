@@ -31,6 +31,11 @@ async function getOrCreateConversation(currentUser, payload) {
     const err = new Error('Forbidden'); err.status = 403; err.code = 'FORBIDDEN'; throw err;
   }
 
+  // Enforce policy: only listing conversations are allowed
+  if (value.type !== 'listing') {
+    const err = new Error('Direct messages are disabled'); err.status = 403; err.code = 'DM_DISABLED'; throw err;
+  }
+
   const filter = { type: value.type, 'participants.userId': { $all: [userAId, userBId] } };
   if (value.type === 'listing') filter.listingId = value.listingId;
   let convo = await Conversation.findOne(filter);
@@ -68,7 +73,8 @@ function shapeConversation(convo, viewerId) {
 
 async function listConversations(currentUser, { page = 1, limit = 20 } = {}) {
   const skip = (Math.max(1, Number(page)) - 1) * Math.max(1, Number(limit));
-  const items = await Conversation.find({ 'participants.userId': currentUser._id }).sort({ updatedAt: -1 }).skip(skip).limit(limit);
+  // Return only listing conversations per policy
+  const items = await Conversation.find({ 'participants.userId': currentUser._id, type: 'listing' }).sort({ updatedAt: -1 }).skip(skip).limit(limit);
   return items.map((c) => shapeConversation(c, currentUser._id));
 }
 
@@ -86,6 +92,7 @@ async function sendInConversation(currentUser, payload) {
   if (!convo) { const err = new Error('Conversation not found'); err.status = 404; err.code = 'NOT_FOUND'; throw err; }
   const participantIds = convo.participants.map((p) => String(p.userId));
   if (!participantIds.includes(String(currentUser._id))) { const err = new Error('Forbidden'); err.status = 403; err.code = 'FORBIDDEN'; throw err; }
+  if (convo.type !== 'listing') { const err = new Error('Messaging disabled for this conversation'); err.status = 403; err.code = 'DM_DISABLED'; throw err; }
   const otherUserId = convo.participants.find((p) => String(p.userId) !== String(currentUser._id)).userId;
   if (await isBlocked(currentUser._id, otherUserId)) { const err = new Error('Forbidden'); err.status = 403; err.code = 'FORBIDDEN'; throw err; }
 
@@ -169,7 +176,7 @@ async function getOrCreateFromListing(currentUser, { listingId, sellerId }) {
 }
 
 async function getOrCreateDM(currentUser, { otherUserId }) {
-  return getOrCreateConversation(currentUser, { type: 'dm', otherUserId });
+  const err = new Error('Direct messages are disabled'); err.status = 403; err.code = 'DM_DISABLED'; throw err;
 }
 
 module.exports = { getOrCreateConversation, getOrCreateFromListing, getOrCreateDM, listConversations, sendInConversation, listMessages, markRead }; 

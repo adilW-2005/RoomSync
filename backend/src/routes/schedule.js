@@ -12,7 +12,7 @@ router.post('/uploadScreenshot', authRequired, upload.single('image'), async (re
 			throw err;
 		}
 		const raw = await parseScheduleWithVision(req.file.buffer);
-		const normalized = normalizeEvents(raw);
+		const normalized = await normalizeEvents(raw);
 		const saved = await saveEventsForUser(req.user.id, normalized);
 		return res.success({ events: saved });
 	} catch (e) { next(e); }
@@ -26,7 +26,7 @@ router.post('/save', authRequired, async (req, res, next) => {
 			err.status = 400; err.code = 'VALIDATION_ERROR';
 			throw err;
 		}
-		const normalized = normalizeEvents(events);
+		const normalized = await normalizeEvents(events);
 		const saved = await saveEventsForUser(req.user.id, normalized);
 		return res.success({ events: saved });
 	} catch (e) { next(e); }

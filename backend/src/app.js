@@ -26,7 +26,7 @@ function createApp() {
   }
 
   // Optional HTTPS enforcement (useful behind proxies)
-  if (env.ENFORCE_HTTPS === 'true') {
+  if (env.ENFORCE_HTTPS === 'true' && env.NODE_ENV !== 'test') {
     app.use((req, res, next) => {
       const proto = req.headers['x-forwarded-proto'] || req.protocol;
       if (proto !== 'https') {

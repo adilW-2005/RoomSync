@@ -12,7 +12,6 @@ import RoommateCard from '../../components/RoommateCard';
 import useMemberStore from '../../state/useMemberStore';
 import { spacing, colors } from '../../styles/theme';
 import { Ionicons } from '@expo/vector-icons';
-import useMessageStore from '../../state/useMessageStore';
 import useNotificationStore from '../../state/useNotificationStore';
 
 const HEADER_H = 64;
@@ -21,13 +20,12 @@ const GUTTER = 20;
 
 export default function DashboardScreen({ navigation }) {
   const { currentGroup, getCurrent } = useGroupStore();
-  const { token } = useAuthStore();
+  const { token, user } = useAuthStore();
   const [loaded, setLoaded] = useState(false);
   const [activeTab, setActiveTab] = useState('Today');
   const { membersById, fetchCurrentGroupMembers } = useMemberStore();
   const [tabsH, setTabsH] = useState(34);
   const [matesH, setMatesH] = useState(170);
-  const { openOrCreateDM } = useMessageStore();
   const { unreadCount: notifUnread, refreshUnreadCount } = useNotificationStore();
 
   useEffect(() => {
@@ -53,10 +51,13 @@ export default function DashboardScreen({ navigation }) {
   const heroH = 136; // slightly smaller hero height
 
   const roommateItems = useMemo(() => {
-    const you = [{ id: 'you', name: currentGroup?.ownerName || 'You', fact: 'You' }];
-    const others = Object.entries(membersById).map(([id, name]) => ({ id, name }));
+    const currentUserId = String(user?.id || '');
+    const you = [{ id: currentUserId || 'you', name: 'You', fact: 'You' }];
+    const others = Object.entries(membersById)
+      .filter(([id]) => String(id) !== currentUserId && id != null)
+      .map(([id, name]) => ({ id, name }));
     return [...you, ...others];
-  }, [membersById, currentGroup?.ownerName]);
+  }, [membersById, user?.id]);
 
   const bottomDockSpace = 120;
   const baseMatesHeight = heroH + 34;
@@ -94,15 +95,6 @@ export default function DashboardScreen({ navigation }) {
     }
   };
 
-  const onMessageRoommate = async (otherUserId) => {
-    try {
-      const conv = await openOrCreateDM(otherUserId);
-      navigation.navigate('Messages', { screen: 'Conversation', params: { conversationId: conv.id } });
-    } catch (e) {
-      Alert.alert('Error', e.message || 'Could not open chat');
-    }
-  };
-
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar barStyle="dark-content" />
@@ -121,10 +113,10 @@ export default function DashboardScreen({ navigation }) {
           <View style={{ height: 2, backgroundColor: 'rgba(191,87,0,0.15)', borderRadius: 2, marginBottom: 10 }} />
           <FlatList
             data={roommateItems}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => String(item.id)}
             renderItem={({ item }) => (
               <View style={{ width: win.width, alignItems: 'center' }}>
-                <RoommateCard name={item.name} fact={item.fact} style={{ width: cardW, height: heroH }} onMessage={item.id !== 'you' ? () => onMessageRoommate(item.id) : undefined} />
+                <RoommateCard name={item.name} fact={item.fact} style={{ width: cardW, height: heroH }} />
               </View>
             )}
             horizontal
@@ -148,8 +140,8 @@ export default function DashboardScreen({ navigation }) {
             <FeatureCard chipSize={42} minHeight={targetCardH} icon="calendar" title="Events" subtitle="This week" onPress={() => navigation.navigate('Events')} style={{ flex: 1 }} />
           </View>
           <View style={{ flexDirection: 'row', gap: 12 }}>
+            <FeatureCard chipSize={42} minHeight={targetCardH} icon="cube" title="Inventory" subtitle="House items" onPress={() => navigation.navigate('Inventory')} style={{ flex: 1 }} />
             <FeatureCard chipSize={42} minHeight={targetCardH} icon="cash" title="Expenses" subtitle="Owed to You: $0" onPress={() => navigation.navigate('Expenses')} style={{ flex: 1 }} />
-            <FeatureCard chipSize={42} minHeight={targetCardH} icon="chatbubbles" title="Hangouts" subtitle="Plan something" onPress={() => navigation.navigate('Hangouts')} style={{ flex: 1 }} />
           </View>
         </View>
       </ScrollView>

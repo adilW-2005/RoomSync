@@ -2,6 +2,7 @@ const { Router } = require('express');
 const Joi = require('joi');
 const { authRequired } = require('../middlewares/auth');
 const { getGroupPresence, updatePresence, setHomeGeofence } = require('../presence');
+const { resolveAndCache } = require('../services/placeResolverService');
 
 const router = Router();
 
@@ -97,6 +98,48 @@ router.get('/presence', authRequired, async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
+
+// Resolve UT building codes to coordinates via Google Places, with caching
+router.post('/resolve/buildings', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.array().items(Joi.object({ code: Joi.string().required(), name: Joi.string().required() })).required();
+    const { error, value } = schema.validate(req.body);
+    if (error) { const err = new Error('Invalid input'); err.status = 400; err.code = 'VALIDATION_ERROR'; err.details = error.details.map(d => d.message); throw err; }
+    const results = await Promise.all(value.map(async (b) => {
+      const rec = await resolveAndCache({ sourceType: 'building', key: b.code.toUpperCase(), name: b.name });
+      return {
+        code: b.code,
+        name: b.name,
+        placeId: rec.placeId || null,
+        formatted_address: rec.formattedAddress || null,
+        lat: rec.lat ?? null,
+        lng: rec.lng ?? null,
+      };
+    }));
+    return res.success({ items: results });
+  } catch (e) { next(e); }
+});
+
+// Resolve generic UT places (e.g., apartments) by name/id via Google Places, with caching
+router.post('/resolve/places', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.array().items(Joi.object({ id: Joi.string().required(), name: Joi.string().required() })).required();
+    const { error, value } = schema.validate(req.body);
+    if (error) { const err = new Error('Invalid input'); err.status = 400; err.code = 'VALIDATION_ERROR'; err.details = error.details.map(d => d.message); throw err; }
+    const results = await Promise.all(value.map(async (p) => {
+      const rec = await resolveAndCache({ sourceType: 'place', key: p.id, name: p.name });
+      return {
+        id: p.id,
+        name: p.name,
+        placeId: rec.placeId || null,
+        formatted_address: rec.formattedAddress || null,
+        lat: rec.lat ?? null,
+        lng: rec.lng ?? null,
+      };
+    }));
+    return res.success({ items: results });
+  } catch (e) { next(e); }
 });
 
 module.exports = router; 

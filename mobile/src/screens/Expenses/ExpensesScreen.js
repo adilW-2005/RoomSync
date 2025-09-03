@@ -14,12 +14,15 @@ import GradientHeader from '../../components/GradientHeader';
 import { LinearGradient } from 'expo-linear-gradient';
 import { spacing, colors, radii } from '../../styles/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { sdk } from '../../api/sdk';
+import useAuthStore from '../../state/useAuthStore';
 
 export default function ExpensesScreen() {
   const { balances, expenses, fetchBalances, fetchExpenses, createExpense } = useExpenseStore();
   const { membersById, fetchCurrentGroupMembers } = useMemberStore();
   const [modal, setModal] = useState(false);
   const [page, setPage] = useState(1);
+  const { user } = useAuthStore();
 
   useEffect(() => { fetchBalances(); fetchCurrentGroupMembers(); fetchExpenses({ page: 1 }); }, []);
 
@@ -43,6 +46,18 @@ export default function ExpensesScreen() {
     } catch (e) { Alert.alert('Export failed', 'Could not open CSV'); }
   };
 
+  const sendExpensePing = async (item) => {
+    try {
+      const owes = (item.shares || []).map((s) => String(s.userId)).filter((uid) => uid && String(uid) !== String(user?.id));
+      const title = 'Expense reminder';
+      const body = `Reminder: ${item.notes || 'Expense'} · $${(item.amount || 0).toFixed(2)}`;
+      for (const toUserId of owes) {
+        await sdk.notifications.ping({ toUserId, contextType: 'expense', contextId: item.id, title, body });
+      }
+      Alert.alert('Ping sent');
+    } catch (e) { Alert.alert('Ping failed', e.message || 'Try again'); }
+  };
+
   const renderExpense = ({ item, index }) => (
     <FadeSlideIn delay={index * 40}>
       <View style={styles.cardShadow}>
@@ -53,7 +68,12 @@ export default function ExpensesScreen() {
                 <UTText variant="subtitle" style={{ color: colors.burntOrange }}>{(String(membersById[item.payerId] || item.payerId).trim()[0] || '?').toUpperCase()}</UTText>
               </View>
               <View style={{ flex: 1, marginLeft: spacing.md }}>
-                <UTText variant="subtitle" numberOfLines={1}>{membersById[item.payerId] || item.payerId}</UTText>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <UTText variant="subtitle" numberOfLines={1} style={{ flex: 1 }}>{membersById[item.payerId] || item.payerId}</UTText>
+                  <PressableScale onPress={() => sendExpensePing(item)} style={{ paddingHorizontal: 6, paddingVertical: 4 }}>
+                    <Ionicons name="notifications-outline" size={18} color={colors.burntOrange} />
+                  </PressableScale>
+                </View>
                 <UTText variant="meta" numberOfLines={1} style={{ marginTop: 2 }}>{item.notes || 'No notes'}</UTText>
               </View>
               <UTText variant="subtitle" style={{ color: colors.burntOrange }}>${item.amount.toFixed(2)}</UTText>

@@ -44,7 +44,10 @@
     "expo-blur": "~14.1.5",
     "expo-haptics": "~14.1.4",
     "@react-native-community/datetimepicker": "8.4.1",
-    "expo-background-fetch": "~13.1.6"
+    "expo-background-fetch": "~13.1.6",
+    "react-dom": "19.0.0",
+    "react-native-web": "^0.20.0",
+    "@expo/metro-runtime": "~5.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
@@ -65,7 +68,9 @@
   },
   "jest": {
     "preset": "react-native",
-    "setupFiles": ["<rootDir>/jest.setup.js"],
+    "setupFiles": [
+      "<rootDir>/jest.setup.js"
+    ],
     "transformIgnorePatterns": [
       "node_modules/(?!(@react-native|react-native|react-native-reanimated|expo|@expo|expo-.*|@react-navigation)/)"
     ]
@@ -77,13 +82,17 @@
         "type": "ios.simulator",
         "binaryPath": "ios/build/Build/Products/Debug-iphonesimulator/roomsync-mobile.app",
         "build": "expo run:ios --configuration Debug --non-interactive",
-        "device": { "type": "iPhone 15" }
+        "device": {
+          "type": "iPhone 15"
+        }
       },
       "android.emu.debug": {
         "type": "android.emulator",
         "binaryPath": "android/app/build/outputs/apk/debug/app-debug.apk",
         "build": "expo run:android --variant debug --non-interactive",
-        "device": { "avdName": "Pixel_6_API_34" }
+        "device": {
+          "avdName": "Pixel_6_API_34"
+        }
       }
     }
   }

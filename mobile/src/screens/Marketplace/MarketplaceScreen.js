@@ -136,7 +136,7 @@ export default function MarketplaceScreen({ navigation, route }) {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
       <View style={styles.container}>
-        <GradientHeader title="Marketplace" rightIcon="options-outline" />
+        <GradientHeader title="Marketplace" rightIcon="chatbubbles-outline" onPressSettings={() => navigation.navigate('MessagesHome')} />
 
         <View style={styles.segmentRow}>
           <FlatList
@@ -181,17 +181,17 @@ export default function MarketplaceScreen({ navigation, route }) {
           />
         )}
 
-              <PressableScale onPress={openCreate} style={styles.fabWrap}>
-        <View style={styles.fab}>
-          <Ionicons name="add" size={22} color={colors.white} />
-        </View>
-      </PressableScale>
+        <PressableScale onPress={openCreate} style={styles.fabWrap}>
+          <View style={styles.fab}>
+            <Ionicons name="add" size={22} color={colors.white} />
+          </View>
+        </PressableScale>
 
-      <CreateListingModal
-        visible={modalOpen}
-        onClose={closeCreate}
-        onCreate={createListing}
-      />
+        <CreateListingModal
+          visible={modalOpen}
+          onClose={closeCreate}
+          onCreate={createListing}
+        />
       </View>
     </SafeAreaView>
   );

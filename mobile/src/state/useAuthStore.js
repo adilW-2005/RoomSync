@@ -15,8 +15,25 @@ const useAuthStore = create((set, get) => ({
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
       if (raw) {
         const { user, token, firstRun } = JSON.parse(raw);
-        if (token) setAccessToken(token);
-        set({ user, token, hydrated: true, firstRun: firstRun !== false });
+        if (token) {
+          setAccessToken(token);
+          
+          // Validate token by making a test API call
+          try {
+            await api.get('/users/me');
+            // Token is valid, proceed with hydration
+            set({ user, token, hydrated: true, firstRun: firstRun !== false });
+          } catch (e) {
+            // Token is invalid, clear auth state
+            setAccessToken(null);
+            await AsyncStorage.removeItem(STORAGE_KEY);
+            // Also clear group state when token is invalid
+            await AsyncStorage.removeItem('roomsync_group');
+            set({ user: null, token: null, hydrated: true, firstRun: true });
+          }
+        } else {
+          set({ user, token, hydrated: true, firstRun: firstRun !== false });
+        }
       } else {
         set({ hydrated: true, firstRun: true });
       }
@@ -75,6 +92,8 @@ const useAuthStore = create((set, get) => ({
   async logout() {
     setAccessToken(null);
     await AsyncStorage.removeItem(STORAGE_KEY);
+    // Also clear group state when logging out
+    await AsyncStorage.removeItem('roomsync_group');
     set({ user: null, token: null, firstRun: true });
   },
 }));

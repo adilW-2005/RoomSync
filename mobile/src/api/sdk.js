@@ -100,6 +100,7 @@ export const sdk = {
 		async unreadCount() { return api.get('/notifications/unread_count'); },
 		async markRead(id) { return api.post(`/notifications/${id}/read`); },
 		async markAllRead() { return api.post('/notifications/read_all'); },
+		async ping({ toUserId, contextType, contextId, title, body }) { return api.post('/notifications/ping', { toUserId, contextType, contextId, title, body }); },
 	},
 	prefs: {
 		async get() { return api.get('/notification_prefs'); },

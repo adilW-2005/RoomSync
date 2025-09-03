@@ -2,6 +2,7 @@ const { Router } = require('express');
 const Joi = require('joi');
 const Notification = require('../models/Notification');
 const { authRequired } = require('../middlewares/auth');
+const { notifyUsers } = require('../services/notificationService');
 
 const router = Router();
 
@@ -38,6 +39,35 @@ router.post('/read_all', authRequired, async (req, res, next) => {
   try {
     await Notification.updateMany({ userId: req.user._id, readAt: null }, { $set: { readAt: new Date(), status: 'read' } });
     return res.success({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// New: roommate ping
+router.post('/ping', authRequired, async (req, res, next) => {
+  try {
+    const schema = Joi.object({
+      toUserId: Joi.string().required(),
+      contextType: Joi.string().valid('chore', 'expense').required(),
+      contextId: Joi.string().required(),
+      title: Joi.string().optional(),
+      body: Joi.string().optional(),
+    });
+    const { error, value } = schema.validate(req.body || {});
+    if (error) { const err = new Error('Invalid input'); err.status = 400; err.code = 'VALIDATION_ERROR'; err.details = error.details.map((d) => d.message); throw err; }
+
+    // Persist lightweight notification for audit and auto-dismiss
+    const notif = await Notification.create({
+      userId: value.toUserId,
+      type: 'ping',
+      status: 'sent',
+      data: { contextType: value.contextType, contextId: value.contextId, fromUserId: req.user._id },
+      title: value.title || 'Ping',
+      body: value.body || 'You have a reminder',
+    });
+
+    await notifyUsers([value.toUserId], 'inbox', notif.title, notif.body);
+
+    return res.success({ ok: true, id: String(notif._id) });
   } catch (e) { next(e); }
 });
 

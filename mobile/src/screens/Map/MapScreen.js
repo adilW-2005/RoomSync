@@ -1,48 +1,50 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet } from 'react-native';
-import MapView, { Marker, Callout } from 'react-native-maps';
-import utPlaces from '../../assets/ut_places.json';
-import api from '../../api/client';
+import React, { useEffect, useMemo, useState } from 'react';
+import { View, StyleSheet, Pressable, Linking, Platform } from 'react-native';
+import { MapView, Marker, Callout } from '../../components/MapShim';
+import * as Location from 'expo-location';
 import useAuthStore from '../../state/useAuthStore';
 import useGroupStore from '../../state/useGroupStore';
-import { connectSocket, joinGroupRoom, onLocationUpdate, getSocket, disconnectSocket } from '../../lib/socket';
+import { connectSocket, joinGroupRoom, onLocationUpdate, getSocket } from '../../lib/socket';
 import useMemberStore from '../../state/useMemberStore';
+import useScheduleStore from '../../state/useScheduleStore';
 import UTText from '../../components/UTText';
 import UTCard from '../../components/UTCard';
 import UTPin from '../../components/UTPin';
-import RatingStars from '../../components/RatingStars';
+import UTButton from '../../components/UTButton';
+import PillTabs from '../../components/PillTabs';
 import { spacing, colors } from '../../styles/theme';
 
 export default function MapScreen() {
   const [region, setRegion] = useState({ latitude: 30.2849, longitude: -97.736, latitudeDelta: 0.02, longitudeDelta: 0.02 });
-  const [ratings, setRatings] = useState({});
+  const [mode, setMode] = useState('Classes'); // 'Classes' | 'Roommates'
   const [roommatePins, setRoommatePins] = useState({}); // userId -> { lat, lng, updatedAt, battery }
+  const [userLoc, setUserLoc] = useState(null); // { latitude, longitude }
   const { token } = useAuthStore();
   const { currentGroup } = useGroupStore();
   const { membersById, fetchCurrentGroupMembers } = useMemberStore();
+  const { nextClass, etaMinutes, refreshNext } = useScheduleStore();
 
+  // Get current user location for directions context
   useEffect(() => {
     (async () => {
-      const entries = await Promise.all(
-        utPlaces.map(async (p) => {
-          try {
-            const r = await api.get(`/ratings/avg?placeId=${p.placeId}`);
-            return [p.placeId, r];
-          } catch (_) {
-            return [p.placeId, { avg: null }];
-          }
-        })
-      );
-      const map = Object.fromEntries(entries);
-      setRatings(map);
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const pos = await Location.getCurrentPositionAsync({});
+          setUserLoc({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+          setRegion((r) => ({ ...r, latitude: pos.coords.latitude, longitude: pos.coords.longitude }));
+        }
+      } catch (_) {}
     })();
   }, []);
 
+  // Roommate presence bootstrap + live updates
   useEffect(() => {
     let offUpdate = null;
     (async () => {
       if (!token || !currentGroup?.id) return;
       try {
+        const api = (await import('../../api/client')).default;
         const presence = await api.get(`/locations/presence?groupId=${currentGroup.id}`);
         const map = {};
         for (const p of presence) map[p.userId] = { lat: p.lat, lng: p.lng, updatedAt: p.updatedAt, battery: p.battery };
@@ -61,49 +63,124 @@ export default function MapScreen() {
 
   useEffect(() => { fetchCurrentGroupMembers(); }, []);
 
-  const descFor = (pos) => {
-    if (!pos) return '';
-    if (typeof pos.battery === 'number') return `Battery ${pos.battery}%`;
-    return pos.updatedAt ? new Date(pos.updatedAt).toLocaleTimeString() : '';
+  // Auto-refresh next class and ETA when entering Classes mode
+  useEffect(() => {
+    if (mode === 'Classes') {
+      refreshNext();
+    }
+  }, [mode]);
+
+  const roommateMarkers = useMemo(() => {
+    const formatDesc = (pos) => {
+      const last = pos?.updatedAt ? new Date(pos.updatedAt).toLocaleTimeString() : '';
+      const batt = typeof pos?.battery === 'number' ? ` • Battery ${pos.battery}%` : '';
+      return `${last}${batt}`;
+    };
+    return Object.entries(roommatePins).map(([userId, pos]) => {
+      const name = membersById[userId] || 'Roommate';
+      const initials = name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase();
+      return (
+        <Marker key={`rm-${userId}`} coordinate={{ latitude: pos.lat, longitude: pos.lng }} title={name}>
+          <UTPin isRoommate size={26} label={initials} />
+          <Callout tooltip>
+            <UTCard>
+              <UTText variant="subtitle">{name}</UTText>
+              <UTText variant="meta">{formatDesc(pos)}</UTText>
+            </UTCard>
+          </Callout>
+        </Marker>
+      );
+    });
+  }, [roommatePins, membersById]);
+
+  const classMarker = useMemo(() => {
+    if (mode !== 'Classes') return null;
+    if (!nextClass?.location?.lat || !nextClass?.location?.lng) return null;
+    return (
+      <Marker coordinate={{ latitude: nextClass.location.lat, longitude: nextClass.location.lng }} title={`${nextClass.course} • ${nextClass.building} ${nextClass.room || ''}`}>
+        <UTPin size={26} />
+        <Callout tooltip>
+          <UTCard>
+            <UTText variant="subtitle">{nextClass.course}</UTText>
+            <UTText variant="meta">{nextClass.building} {nextClass.room || ''} • {nextClass.start_time}</UTText>
+          </UTCard>
+        </Callout>
+      </Marker>
+    );
+  }, [mode, nextClass]);
+
+  const minsUntil = useMemo(() => {
+    try {
+      if (!nextClass?.start_time) return null;
+      const [h, m] = String(nextClass.start_time).split(':').map((x) => parseInt(x, 10));
+      const start = new Date(); start.setHours(h, m, 0, 0);
+      return Math.max(0, Math.floor((start.getTime() - Date.now()) / 60000));
+    } catch (_) { return null; }
+  }, [nextClass?.start_time]);
+
+  const openDirections = () => {
+    if (!nextClass?.location?.lat || !nextClass?.location?.lng) return;
+    const lat = nextClass.location.lat;
+    const lng = nextClass.location.lng;
+    const label = encodeURIComponent(`${nextClass.course} ${nextClass.building}`);
+    if (Platform.OS === 'ios') {
+      const url = `http://maps.apple.com/?daddr=${lat},${lng}&q=${label}&dirflg=w`;
+      Linking.openURL(url).catch(() => {});
+    } else {
+      const url = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=walking`;
+      Linking.openURL(url).catch(() => {});
+    }
   };
 
   return (
     <View style={styles.container}>
-      <UTText variant="subtitle" style={{ color: colors.burntOrange, padding: spacing.md }}>UT Housing Map</UTText>
+      <View style={{ padding: spacing.md, paddingBottom: spacing.sm }}>
+        <UTText variant="subtitle" style={{ color: colors.burntOrange }}>UT Map</UTText>
+        <PillTabs active={mode} onChange={setMode} tabs={["Classes", "Roommates"]} />
+      </View>
       <MapView style={styles.map} initialRegion={region}>
-        {utPlaces.map((p) => {
-          const avg = ratings[p.placeId]?.avg ?? null;
-          return (
-            <Marker key={p.placeId} coordinate={{ latitude: p.lat, longitude: p.lng }} title={p.placeName}>
-              <UTPin />
-              <Callout tooltip>
-                <UTCard>
-                  <UTText variant="subtitle">{p.placeName}</UTText>
-                  {avg != null ? (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
-                      <RatingStars value={avg} />
-                      <UTText variant="meta" style={{ marginLeft: 6 }}>{avg.toFixed(2)}</UTText>
-                    </View>
-                  ) : (
-                    <UTText variant="meta">Avg rating: N/A</UTText>
-                  )}
-                </UTCard>
-              </Callout>
-            </Marker>
-          );
-        })}
-        {Object.entries(roommatePins).map(([userId, pos]) => (
-          <Marker key={`rm-${userId}`} coordinate={{ latitude: pos.lat, longitude: pos.lng }} title={`${membersById[userId] || 'Roommate'} (${userId.substring(0, 4)})`}>
+        {mode === 'Roommates' ? roommateMarkers : null}
+        {mode === 'Classes' ? classMarker : null}
+        {userLoc ? (
+          <Marker coordinate={userLoc} title="You">
             <UTPin isRoommate size={20} />
-            <Callout tooltip>
-              <UTCard>
-                <UTText variant="subtitle">{membersById[userId] || 'Roommate'}</UTText>
-                <UTText variant="meta">{descFor(pos)}</UTText>
-              </UTCard>
-            </Callout>
           </Marker>
-        ))}
+        ) : null}
       </MapView>
+
+      {mode === 'Classes' ? (
+        <View style={{ position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: spacing.lg }}>
+          <UTCard>
+            <UTText variant="subtitle">Next Class</UTText>
+            <UTText variant="meta" style={{ marginTop: 4 }}>
+              {nextClass ? `${nextClass.course} • ${nextClass.building} ${nextClass.room || ''} • ${nextClass.start_time}` : 'No upcoming class'}
+            </UTText>
+            <View style={{ flexDirection: 'row', marginTop: 6 }}>
+              {etaMinutes != null ? (
+                <UTText variant="meta">ETA {etaMinutes} min</UTText>
+              ) : null}
+              {minsUntil != null ? (
+                <UTText variant="meta" style={{ marginLeft: spacing.md }}>Starts in {minsUntil} min</UTText>
+              ) : null}
+            </View>
+            <View style={{ marginTop: spacing.md, flexDirection: 'row', justifyContent: 'space-between' }}>
+              <UTButton title="Refresh" variant="secondary" onPress={refreshNext} style={{ flex: 1, marginRight: spacing.sm }} />
+              <Pressable onPress={openDirections} style={{ justifyContent: 'center', alignItems: 'center', flex: 1 }}>
+                <UTText variant="label">Directions</UTText>
+              </Pressable>
+            </View>
+          </UTCard>
+        </View>
+      ) : null}
+
+      {mode === 'Roommates' ? (
+        <View style={{ position: 'absolute', left: spacing.lg, right: spacing.lg, bottom: spacing.lg }}>
+          <UTCard>
+            <UTText variant="subtitle">Roommates</UTText>
+            <UTText variant="meta" style={{ marginTop: 4 }}>Live locations for your group. Tap a pin for last seen and battery.</UTText>
+          </UTCard>
+        </View>
+      ) : null}
     </View>
   );
 }

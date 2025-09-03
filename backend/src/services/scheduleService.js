@@ -5,7 +5,7 @@ const utc = require('dayjs/plugin/utc');
 const timezone = require('dayjs/plugin/timezone');
 const { loadEnv } = require('../config/env');
 const ScheduleEvent = require('../models/ScheduleEvent');
-const buildingMap = require('../data/buildingMap.json');
+const { resolveAndCache } = require('./placeResolverService');
 
 // dayjs setup
 dayjs.extend(utc);
@@ -44,10 +44,21 @@ function to24h(timeStr) {
 	} catch (_) { return null; }
 }
 
-function mapBuildingCode(code) {
-	if (!code) return null;
-	const key = code.trim().toUpperCase();
-	return buildingMap[key] || null;
+async function resolveBuildingLocation(buildingCode) {
+	try {
+		const code = String(buildingCode || '').trim().toUpperCase();
+		if (!code) return null;
+		// Attempt to find building name from UT dataset if available; fallback to code itself
+		let name = code;
+		try {
+			const utList = require('../data/ut_buildings.json');
+			const found = (Array.isArray(utList) ? utList : []).find((b) => String(b.code).toUpperCase() === code);
+			if (found?.name) name = found.name;
+		} catch (_) {}
+		const rec = await resolveAndCache({ sourceType: 'building', key: code, name });
+		if (rec?.lat != null && rec?.lng != null) return { lat: rec.lat, lng: rec.lng };
+		return null;
+	} catch (_) { return null; }
 }
 
 async function parseScheduleWithVision(imageBuffer) {
@@ -93,7 +104,7 @@ Important:
 	return parsed;
 }
 
-function normalizeEvents(raw) {
+async function normalizeEvents(raw) {
 	function computeDurationMinutes(start24, end24) {
 		try {
 			const [sh, sm] = start24.split(':').map((x) => parseInt(x, 10));
@@ -134,7 +145,7 @@ function normalizeEvents(raw) {
 		const end24 = to24h(r.end_time);
 		daysExpanded = applyDayHeuristics(daysExpanded, start24, end24);
 		const building = String(r.building || '').toUpperCase().trim();
-		const loc = mapBuildingCode(building);
+		const loc = null; // resolved asynchronously below
 		return {
 			course: String(r.course || '').trim(),
 			building,
@@ -166,6 +177,15 @@ function normalizeEvents(raw) {
 		location: g.location,
 		days: Array.from(g.days).sort((a, b) => (dayOrder.get(a) ?? 99) - (dayOrder.get(b) ?? 99)),
 	}));
+
+	// Resolve building coordinates for each unique building in aggregated
+	const uniqueBuildings = Array.from(new Set(aggregated.map((a) => a.building).filter(Boolean)));
+	const codeToLoc = {};
+	await Promise.all(uniqueBuildings.map(async (code) => { codeToLoc[code] = await resolveBuildingLocation(code); }));
+	for (const a of aggregated) {
+		const loc = codeToLoc[a.building];
+		if (loc) a.location = loc;
+	}
 	return aggregated;
 }
 

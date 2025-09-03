@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Pressable, Text } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 
-export default function PillTabs({ active = 'Expenses', onChange, tabs = ['Expenses', 'Chores', 'Events', 'Inventory'] }) {
+export default function PillTabs({ active = 'Classes', onChange, tabs = ['Classes', 'Roommates'] }) {
   return (
     <View style={{ marginTop: 6, marginBottom: spacing.md, paddingHorizontal: spacing.lg }}>
       <View style={{ flexDirection: 'row', gap: 8 }}>

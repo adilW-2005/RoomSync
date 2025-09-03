@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, StyleSheet, FlatList, SafeAreaView, Dimensions, Animated, Modal } from 'react-native';
+import { View, StyleSheet, FlatList, SafeAreaView, Dimensions, Animated, Modal, ActionSheetIOS, Alert, ScrollView } from 'react-native';
 import { PanGestureHandler, State, Swipeable } from 'react-native-gesture-handler';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ import UTCard from '../../components/UTCard';
 import UTButton from '../../components/UTButton';
 import PressableScale from '../../components/PressableScale';
 import { spacing, colors, radii, shadows } from '../../styles/theme';
+import { sdk } from '../../api/sdk';
 
 const DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -27,6 +28,10 @@ function formatRange(s) { const e = addDays(s, 6); return `${s.getMonth()+1}/${s
 function isSameDay(a, b) { return new Date(a).toDateString() === new Date(b).toDateString(); }
 function keyFor(date) { const d = new Date(date); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`; }
 
+function buildChorePingBody(chore) {
+	try { return `Reminder: ${chore.title} due ${new Date(chore.dueAt).toLocaleDateString(undefined, { weekday: 'short' })}`; } catch (_) { return `Reminder: ${chore.title}`; }
+}
+
 export default function ChoresScreen() {
 	const { openChores, doneChores, fetchOpen, fetchDone, completeChore, createChore, updateChore, loading } = useChoreStore();
 	const { currentGroup } = useGroupStore();
@@ -37,6 +42,7 @@ export default function ChoresScreen() {
 	const [filterMode, setFilterMode] = useState('group'); // 'group' | 'mine' | 'roommate'
 	const [filterOpen, setFilterOpen] = useState(false);
 	const [selectedRoommateId, setSelectedRoommateId] = useState(null);
+	const [pingModal, setPingModal] = useState({ visible: false, uid: null, name: '', chores: [] });
 
 	useEffect(() => { fetchOpen(); fetchDone(); }, []);
 
@@ -125,6 +131,11 @@ export default function ChoresScreen() {
 		const completedThisWeek = doneListAll.filter(within).length;
 		const totalThisWeek = combined.length || (openListAll.filter(within).length);
 
+		const openPingModal = () => {
+			const choices = (openListAll || []).slice().sort((a, b) => new Date(a.dueAt) - new Date(b.dueAt));
+			setPingModal({ visible: true, uid, name: roommate.name, chores: choices });
+		};
+
 		return (
 			<View style={{ marginBottom: spacing.lg }}>
 				<LinearGradient colors={["#FFF9F2", "#FFFFFF"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ borderRadius: radii.card }}> 
@@ -147,6 +158,9 @@ export default function ChoresScreen() {
 											</PressableScale>
 										</View>
 									</View>
+									<PressableScale onPress={openPingModal} style={[styles.backBtn, { marginLeft: 8 }]}> 
+										<Ionicons name="notifications-outline" size={18} color={colors.burntOrange} />
+									</PressableScale>
 								</View>
 								{combined.length === 0 ? (
 									<UTText variant="meta" style={{ paddingVertical: spacing.md, paddingHorizontal: spacing.sm }}>No chores</UTText>
@@ -154,9 +168,25 @@ export default function ChoresScreen() {
 									combined.map((c, idx) => {
 										const isDone = c.status === 'done';
 										const rightActions = renderRightActions(() => !isDone && completeChore(c.id), () => onUpdate(c.id, { status: 'done' }));
+										const onLong = () => {
+											const options = ['Ping assignee', 'Edit', 'Cancel'];
+											const cancel = 2;
+											ActionSheetIOS.showActionSheetWithOptions({ options, cancelButtonIndex: cancel }, async (i) => {
+												if (i === 0) {
+													try {
+														const assignees = Array.isArray(c.assignees) && c.assignees.length ? c.assignees : [uid];
+														for (const toUserId of assignees) {
+															await sdk.notifications.ping({ toUserId: String(toUserId), contextType: 'chore', contextId: c.id, title: 'Chore reminder', body: buildChorePingBody(c) });
+														}
+														Alert.alert('Ping sent');
+													} catch (e) { Alert.alert('Ping failed', e.message || 'Try again'); }
+												}
+												if (i === 1) { setEditChore(c); setModal(true); }
+											});
+										};
 										return (
 											<Swipeable key={c.id} renderRightActions={rightActions} overshootRight={false}>
-												<PressableScale onLongPress={() => { setEditChore(c); setModal(true); }}>
+												<PressableScale onLongPress={onLong}>
 													<View style={[styles.choreRow, idx % 2 === 1 && styles.choreRowAlt]}>
 														<View style={{ flex: LEFT_FLEX, flexDirection: 'row', alignItems: 'center' }}>
 															<Ionicons name={isDone ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={isDone ? '#22C55E' : colors.burntOrange} style={{ marginRight: 8 }} />
@@ -172,7 +202,7 @@ export default function ChoresScreen() {
 														<UTText variant="meta" style={{ marginLeft: 8 }}>{new Date(c.dueAt).toLocaleDateString(undefined, { weekday: 'short' })}</UTText>
 													</View>
 												</View>
-											</PressableScale>
+												</PressableScale>
 											</Swipeable>
 										);
 									})
@@ -237,6 +267,43 @@ export default function ChoresScreen() {
 										<UTText variant="body">{m.name}</UTText>
 									</PressableScale>
 								))}
+							</UTCard>
+						</View>
+					</View>
+				</Modal>
+
+				{/* Ping selection modal */}
+				<Modal visible={pingModal.visible} animationType="fade" transparent onRequestClose={() => setPingModal({ visible: false, uid: null, name: '', chores: [] })}>
+					<View style={styles.dropdownBackdrop}>
+						<View style={[styles.dropdownWrapper, { right: undefined, left: spacing.lg, top: 120 }] }>
+							<UTCard style={[styles.dropdownCard, { width: 300 }] }>
+								<UTText variant="subtitle" style={{ marginBottom: spacing.sm }}>Ping {pingModal.name}</UTText>
+								<ScrollView style={{ maxHeight: 260 }}>
+									{(pingModal.chores || []).length ? (
+										pingModal.chores.map((c) => (
+											<PressableScale key={c.id} onPress={async () => {
+												try {
+													await sdk.notifications.ping({ toUserId: pingModal.uid, contextType: 'chore', contextId: c.id, title: 'Chore reminder', body: buildChorePingBody(c) });
+													Alert.alert('Ping sent');
+												} catch (e) { Alert.alert('Ping failed', e.message || 'Try again'); }
+												setPingModal({ visible: false, uid: null, name: '', chores: [] });
+											}} style={styles.memberRow}>
+												<View style={styles.avatarSmall}><UTText variant="subtitle" style={{ color: colors.burntOrange }}>{(c.title || '?').slice(0,1)}</UTText></View>
+												<View>
+													<UTText variant="body">{c.title}</UTText>
+													<UTText variant="meta">Due {new Date(c.dueAt).toLocaleDateString(undefined, { weekday: 'short' })}</UTText>
+												</View>
+											</PressableScale>
+										))
+									) : (
+										<UTText variant="meta">No open chores to ping</UTText>
+									)}
+								</ScrollView>
+								<View style={{ alignItems: 'flex-end', marginTop: spacing.sm }}>
+									<PressableScale onPress={() => setPingModal({ visible: false, uid: null, name: '', chores: [] })} style={styles.memberRow}>
+										<UTText variant="label" style={{ color: colors.burntOrange }}>Close</UTText>
+									</PressableScale>
+								</View>
 							</UTCard>
 						</View>
 					</View>

@@ -17,20 +17,33 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "RoomSync uses your location to share presence with your roommates.",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "RoomSync uses your location to share presence with your roommates in the background.",
-        "UIBackgroundModes": ["location"]
-      }
+        "UIBackgroundModes": [
+          "location",
+          "location"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "bundleIdentifier": "com.adilwaheed.roomsyncmobile"
     },
     "android": {
-      "adaptiveIcon": { "foregroundImage": "./assets/icon.png", "backgroundColor": "#FFFFFF" },
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
+        "backgroundColor": "#FFFFFF"
+      },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "ACCESS_BACKGROUND_LOCATION"
       ]
     },
-    "web": { "bundler": "metro" },
+    "web": {
+      "bundler": "metro"
+    },
     "extra": {
-      "eas": { "projectId": "roomsync" }
-    }
+      "eas": {
+        "projectId": "4c5ba291-d6f7-48a0-8630-88a9b691517c"
+      }
+    },
+    "owner": "adilwaheed"
   }
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import { MapView, Marker, Polyline } from '../../components/MapShim';
 import * as Location from 'expo-location';
 import { NavAPI } from '../../api/sdk';
 import UTText from '../../components/UTText';

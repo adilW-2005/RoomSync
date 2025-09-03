@@ -5,6 +5,8 @@ services:
   plan: starter
   autoDeploy: true
   healthCheckPath: /healthz
+  dockerfilePath: backend/Dockerfile
+  buildContext: ./backend
   envVars:
   - key: NODE_ENV
     value: production
