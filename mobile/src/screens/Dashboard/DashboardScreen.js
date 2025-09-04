@@ -98,7 +98,7 @@ export default function DashboardScreen({ navigation }) {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: '#FFFFFF' }}>
       <StatusBar barStyle="dark-content" />
-      <GradientHeader title="RoomSync" rightIcon="notifications-outline" rightBadge={notifUnread} height={HEADER_H} overlayHeight={160} onPressSettings={openInbox} />
+      <GradientHeader title="UT Student Living" rightIcon="notifications-outline" rightBadge={notifUnread} height={HEADER_H} overlayHeight={160} onPressSettings={openInbox} />
       <View onLayout={(e) => setTabsH(e.nativeEvent.layout.height)}>
         <PillTabs active={activeTab} onChange={setActiveTab} tabs={['Today', 'This Week', 'Overdue', 'Nearby']} />
       </View>

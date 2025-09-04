@@ -40,7 +40,7 @@ export const scheduleNotificationAsync = async (content, trigger) => {
   if (isWeb) {
     // Use browser notifications if available
     if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(content.title || 'RoomSync', {
+      new Notification(content.title || 'UT Student Living', {
         body: content.body,
         icon: '/favicon.ico',
       });

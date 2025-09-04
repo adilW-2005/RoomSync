@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert, Image, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, Alert, Image, TouchableOpacity, SafeAreaView } from 'react-native';
 import useAuthStore from '../../state/useAuthStore';
 import * as ImagePicker from 'expo-image-picker';
 import UTText from '../../components/UTText';
 import UTInput from '../../components/UTInput';
 import UTButton from '../../components/UTButton';
+import GradientHeader from '../../components/GradientHeader';
+import UTCard from '../../components/UTCard';
 import { colors, spacing, radii } from '../../styles/theme';
 
 export default function RegisterScreen({ navigation }) {
@@ -37,26 +39,35 @@ export default function RegisterScreen({ navigation }) {
   };
 
   return (
-    <View style={styles.container}>
-      <UTText variant="title" style={{ color: colors.burntOrange, textAlign: 'center', marginBottom: spacing.lg }}>Create Account</UTText>
-      {avatarBase64 ? (
-        <Image source={{ uri: avatarBase64 }} style={styles.avatar} />
-      ) : (
-        <TouchableOpacity style={styles.avatarPlaceholder} onPress={onPick}>
-          <UTText variant="meta" style={{ color: '#8E8E93' }}>Add Avatar</UTText>
-        </TouchableOpacity>
-      )}
-      <UTButton title="Choose Photo" variant="secondary" onPress={onPick} style={{ marginBottom: spacing.md }} />
-      <UTInput label="NAME" placeholder="Bevo Longhorn" value={name} onChangeText={setName} style={{ marginBottom: spacing.md }} />
-      <UTInput label="EMAIL" placeholder="you@utexas.edu" autoCapitalize="none" value={email} onChangeText={setEmail} style={{ marginBottom: spacing.md }} />
-      <UTInput label="PASSWORD" placeholder="••••••••" secureTextEntry value={password} onChangeText={setPassword} style={{ marginBottom: spacing.md }} />
-      <UTButton title="Sign up" onPress={onSubmit} />
-    </View>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+
+      <View style={styles.container}>
+        <View style={styles.cardShadow}>
+          <UTCard style={{ backgroundColor: 'transparent', padding: spacing.lg }}>
+            <UTText variant="title" style={{ color: colors.burntOrange, textAlign: 'center', marginBottom: spacing.sm }}>Join UT Student Living</UTText>
+            <UTText variant="meta" style={{ textAlign: 'center', color: '#6B7280', marginBottom: spacing.lg }}>Let 2s set up your profile</UTText>
+            {avatarBase64 ? (
+              <Image source={{ uri: avatarBase64 }} style={styles.avatar} />
+            ) : (
+              <TouchableOpacity style={styles.avatarPlaceholder} onPress={onPick}>
+                <UTText variant="meta" style={{ color: '#8E8E93' }}>Add Avatar</UTText>
+              </TouchableOpacity>
+            )}
+            <UTButton title="Choose Photo" variant="secondary" onPress={onPick} style={{ marginBottom: spacing.md }} />
+            <UTInput label="NAME" placeholder="Bevo Longhorn" value={name} onChangeText={setName} style={{ marginBottom: spacing.md }} />
+            <UTInput label="EMAIL" placeholder="you@utexas.edu" autoCapitalize="none" value={email} onChangeText={setEmail} style={{ marginBottom: spacing.md }} />
+            <UTInput label="PASSWORD" placeholder="••••••••" secureTextEntry value={password} onChangeText={setPassword} style={{ marginBottom: spacing.md }} />
+            <UTButton title="Sign up" onPress={onSubmit} />
+          </UTCard>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 24, justifyContent: 'center', backgroundColor: '#F8F8F8' },
+  container: { flex: 1, padding: spacing.lg, justifyContent: 'center' },
+  cardShadow: { borderRadius: radii.card, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 7 },
   avatar: { width: 92, height: 92, borderRadius: 46, alignSelf: 'center', marginBottom: 12 },
   avatarPlaceholder: { width: 92, height: 92, borderRadius: 46, alignSelf: 'center', marginBottom: 12, borderWidth: 1, borderColor: '#E5E5EA', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFFFFF' },
 }); 

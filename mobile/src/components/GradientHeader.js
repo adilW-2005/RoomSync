@@ -6,7 +6,7 @@ import UTText from './UTText';
 import { colors, spacing } from '../styles/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function GradientHeader({ title = 'RoomSync', onPressSettings, rightIcon = 'settings', rightBadge = 0, height = 72, overlayHeight = 160 }) {
+export default function GradientHeader({ title = 'UT Student Living', onPressSettings, rightIcon = 'settings', rightBadge = 0, height = 72, overlayHeight = 160 }) {
   const insets = useSafeAreaInsets();
   const containerH = height + insets.top;
   return (
@@ -19,7 +19,7 @@ export default function GradientHeader({ title = 'RoomSync', onPressSettings, ri
       />
       <View style={[styles.header, { height: containerH, paddingTop: insets.top + spacing.sm }]}>
         <View style={styles.row}>
-          <UTText variant="title" color={colors.burntOrange} style={{ fontFamily: 'Poppins_600SemiBold', fontSize: 26 }}>{title}</UTText>
+          <UTText variant="title" color={colors.burntOrange} style={{ fontFamily: 'Poppins_600SemiBold', fontSize: 26 }}>{title || 'UT Student Living'}</UTText>
           <View style={{ position: 'relative' }}>
             <Ionicons name={rightIcon} size={22} color="#8E8E93" onPress={onPressSettings} />
             {rightBadge > 0 ? (

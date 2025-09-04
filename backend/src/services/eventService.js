@@ -211,7 +211,7 @@ async function exportICal(user, { groupId } = {}) {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//RoomSync UT//Events//EN',
+    'PRODID:-//UT Student Living//Events//EN',
   ];
   for (const e of events) {
     lines.push('BEGIN:VEVENT');

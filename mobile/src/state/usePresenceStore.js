@@ -50,7 +50,7 @@ const usePresenceStore = create((set, get) => ({
           pausesUpdatesAutomatically: true,
           showsBackgroundLocationIndicator: false,
           foregroundService: {
-            notificationTitle: 'RoomSync UT',
+            notificationTitle: 'UT Student Living',
             notificationBody: 'Sharing your location with your group',
           },
         });
