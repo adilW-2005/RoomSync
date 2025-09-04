@@ -45,7 +45,6 @@ export default function RegisterScreen({ navigation }) {
         <View style={styles.cardShadow}>
           <UTCard style={{ backgroundColor: 'transparent', padding: spacing.lg }}>
             <UTText variant="title" style={{ color: colors.burntOrange, textAlign: 'center', marginBottom: spacing.sm }}>Join UT Student Living</UTText>
-            <UTText variant="meta" style={{ textAlign: 'center', color: '#6B7280', marginBottom: spacing.lg }}>Let 2s set up your profile</UTText>
             {avatarBase64 ? (
               <Image source={{ uri: avatarBase64 }} style={styles.avatar} />
             ) : (
