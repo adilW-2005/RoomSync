@@ -17,6 +17,7 @@ import HangoutsScreen from '../screens/Hangouts/HangoutsScreen';
 import { Ionicons } from '@expo/vector-icons';
 import GroupSettingsScreen from '../screens/Settings/GroupSettingsScreen';
 import { View, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AddExpenseModal from '../screens/Expenses/AddExpenseModal';
 import CreateChoreModal from '../screens/Chores/CreateChoreModal';
 import ActivityInboxScreen from '../screens/Inbox/ActivityInboxScreen';
@@ -118,12 +119,22 @@ const TabIcon = ({ name, color, focused }) => {
 };
 
 export default function MainTabs() {
+  const insets = useSafeAreaInsets();
+  // Keep labels fully visible above the home indicator / gesture bar.
+  const tabBarBaseHeight = 64;
+  const tabBarPaddingTop = 8;
+  const tabBarPaddingBottom = Math.max(10, insets.bottom);
+
   return (
     <Tab.Navigator screenOptions={({ route }) => ({
       headerTitleStyle: { fontFamily: 'Poppins_600SemiBold' },
       tabBarActiveTintColor: '#BF5700',
       tabBarInactiveTintColor: '#8E8E93',
-      tabBarStyle: { height: 64, paddingBottom: 8, paddingTop: 8 },
+      tabBarStyle: {
+        height: tabBarBaseHeight + insets.bottom,
+        paddingTop: tabBarPaddingTop,
+        paddingBottom: tabBarPaddingBottom,
+      },
       tabBarIcon: ({ color, focused }) => {
         const map = {
           Dashboard: 'home',

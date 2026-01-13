@@ -87,8 +87,10 @@ export default function AccountSettingsScreen({ navigation }) {
 
   const pickImage = async () => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      const status = perm?.status;
+      const granted = perm?.granted === true || status === 'granted' || status === 'limited';
+      if (!granted) {
         Alert.alert('Permission needed', 'Please grant camera roll permissions');
         return;
       }
@@ -101,9 +103,16 @@ export default function AccountSettingsScreen({ navigation }) {
         base64: true,
       });
 
-      if (!result.canceled && result.assets[0]) {
+      const canceled = result?.canceled === true;
+      const asset = Array.isArray(result?.assets) && result.assets.length > 0 ? result.assets[0] : null;
+
+      if (!canceled && asset) {
+        if (!asset.base64) {
+          Alert.alert('Upload Failed', 'Could not read the selected image. Please try a different photo.');
+          return;
+        }
         setLoading(true);
-        await sdk.users.updateProfile({ avatarBase64: result.assets[0].base64 });
+        await sdk.users.updateProfile({ avatarBase64: asset.base64 });
         await refreshUser();
         Alert.alert('Success', 'Profile picture updated');
       }

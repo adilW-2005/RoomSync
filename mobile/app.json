@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "roomsync-mobile",
+    "name": "UT Student Living",
     "slug": "roomsync-mobile",
     "version": "0.1.0",
     "scheme": "roomsyncut",
@@ -15,8 +15,10 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSLocationWhenInUseUsageDescription": "RoomSync uses your location to share presence with your roommates.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "RoomSync uses your location to share presence with your roommates in the background.",
+        "CFBundleDisplayName": "UT Student Living",
+        "NSLocationWhenInUseUsageDescription": "UT Student Living uses your location to share presence with your roommates.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "UT Student Living uses your location to share presence with your roommates in the background.",
+        "NSPhotoLibraryUsageDescription": "UT Student Living needs access to your photo library to let you upload photos for marketplace listings (like furniture or textbooks you're selling), add photos to inventory items you're tracking with roommates, attach receipts to shared expenses, and add photos to apartment/dorm reviews. For example, you can take a photo of your desk to create a furniture listing or attach a receipt photo when splitting a grocery bill.",
         "UIBackgroundModes": [
           "location",
           "location"

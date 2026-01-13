@@ -7,7 +7,7 @@
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
-    <string>roomsync-mobile</string>
+    <string>UT Student Living</string>
     <key>CFBundleExecutable</key>
     <string>$(EXECUTABLE_NAME)</string>
     <key>CFBundleIdentifier</key>
@@ -48,9 +48,11 @@
       <true/>
     </dict>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>RoomSync uses your location to share presence with your roommates in the background.</string>
+    <string>UT Student Living uses your location to share presence with your roommates in the background.</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>RoomSync uses your location to share presence with your roommates.</string>
+    <string>UT Student Living uses your location to share presence with your roommates.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>UT Student Living needs access to your photo library to let you upload photos and set your profile picture.</string>
     <key>UIBackgroundModes</key>
     <array>
       <string>location</string>
