@@ -70,7 +70,10 @@ router.post('/join', authRequired, async (req, res, next) => {
 
 router.post('/join/invite', authRequired, async (req, res, next) => {
   try {
-    const schema = Joi.object({ inviteCode: Joi.string().length(8).required() });
+    // Backward compatible: older invites were 8 chars; new invites are 6 chars (matches mobile UI).
+    const schema = Joi.object({
+      inviteCode: Joi.alternatives().try(Joi.string().length(6), Joi.string().length(8)).required(),
+    });
     const { error, value } = schema.validate(req.body);
     if (error) {
       const err = new Error('Invalid input');
@@ -169,7 +172,10 @@ router.get('/current/invites', authRequired, async (req, res, next) => {
 
 router.post('/current/invites/revoke', authRequired, async (req, res, next) => {
   try {
-    const schema = Joi.object({ code: Joi.string().length(8).required() });
+    // Backward compatible: older invites were 8 chars; new invites are 6 chars (matches mobile UI).
+    const schema = Joi.object({
+      code: Joi.alternatives().try(Joi.string().length(6), Joi.string().length(8)).required(),
+    });
     const { error, value } = schema.validate(req.body);
     if (error) {
       const err = new Error('Invalid input');

@@ -14,7 +14,8 @@ function generateGroupCode() {
 function generateInviteCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   let code = '';
-  for (let i = 0; i < 8; i += 1) {
+  // Keep invite codes at 6 chars to match the mobile UI input limit.
+  for (let i = 0; i < 6; i += 1) {
     code += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return code;
@@ -50,12 +51,31 @@ async function createGroup(user, name) {
 }
 
 async function joinGroupByCode(user, code) {
-  const group = await Group.findOne({ code: code.toUpperCase() });
+  const upper = code.toUpperCase();
+  // First try group code (primary join flow)
+  let group = await Group.findOne({ code: upper });
+  // If not found, fall back to invite code (keeps compatibility with a 6-char UI)
   if (!group) {
-    const err = new Error('Group not found');
-    err.status = 404;
-    err.code = 'GROUP_NOT_FOUND';
-    throw err;
+    group = await Group.findOne({ 'invites.code': upper });
+    if (!group) {
+      const err = new Error('Group not found');
+      err.status = 404;
+      err.code = 'GROUP_NOT_FOUND';
+      throw err;
+    }
+    const invite = group.invites.find((i) => i.code === upper);
+    if (invite?.revokedAt) {
+      const err = new Error('Invite revoked');
+      err.status = 400;
+      err.code = 'INVITE_REVOKED';
+      throw err;
+    }
+    if (invite?.expiresAt && invite.expiresAt < new Date()) {
+      const err = new Error('Invite expired');
+      err.status = 400;
+      err.code = 'INVITE_EXPIRED';
+      throw err;
+    }
   }
   const already = (user.groups || []).map(String).includes(String(group._id));
   if (!already) {
@@ -220,7 +240,18 @@ async function createInvite(user, { expiresInHours } = {}) {
     throw err;
   }
   ensureRole(group, user._id, ['owner', 'admin']);
-  const code = generateInviteCode();
+  let code = generateInviteCode();
+  let attempts = 0;
+  // Ensure invite code is unique across *both* group codes and existing invites to avoid confusion.
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await Group.findOne({ $or: [{ code }, { 'invites.code': code }] });
+    if (!exists) break;
+    code = generateInviteCode();
+    attempts += 1;
+    if (attempts > 10) throw new Error('Could not generate unique group code');
+  }
   const invite = { code, createdBy: user._id, createdAt: new Date() };
   if (expiresInHours) {
     invite.expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
