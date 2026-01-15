@@ -7,6 +7,11 @@ const { uploadBase64ToCloudinary } = require('./cloudinaryService');
 const { isBlocked, sanitizeText } = require('./moderationService');
 const { handle: orchestrate } = require('./notificationOrchestrator');
 
+const imageBase64Schema = Joi.alternatives().try(
+  Joi.string().base64({ paddingRequired: false }),
+  Joi.string().pattern(/^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/)
+);
+
 function buildStableKey({ type, userAId, userBId, listingId }) {
   const a = String(userAId);
   const b = String(userBId);
@@ -82,7 +87,7 @@ async function sendInConversation(currentUser, payload) {
   const schema = Joi.object({
     conversationId: Joi.string().required(),
     text: Joi.string().allow('').optional(),
-    photosBase64: Joi.array().items(Joi.string().base64({ paddingRequired: false })).optional(),
+    photosBase64: Joi.array().items(imageBase64Schema).optional(),
   });
   const { error, value } = schema.validate(payload || {});
   if (error) {

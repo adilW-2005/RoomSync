@@ -5,6 +5,11 @@ const { updateProfile, deleteAccount, registerPushToken, updateNotificationPrefs
 
 const router = Router();
 
+const imageBase64Schema = Joi.alternatives().try(
+  Joi.string().base64({ paddingRequired: false }),
+  Joi.string().pattern(/^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/)
+);
+
 router.get('/me', authRequired, async (req, res) => {
   const user = req.user.toJSON();
   return res.success(user);
@@ -16,7 +21,7 @@ router.patch('/me', authRequired, async (req, res, next) => {
       name: Joi.string().min(1).optional(),
       bio: Joi.string().max(500).optional(),
       contact: Joi.string().max(200).optional(),
-      avatarBase64: Joi.string().base64({ paddingRequired: false }).optional(),
+      avatarBase64: imageBase64Schema.optional(),
       username: Joi.string().trim().lowercase().min(3).max(20).regex(/^[a-z0-9_.]+$/).optional(),
       showContact: Joi.boolean().optional(),
     });

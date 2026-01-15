@@ -6,6 +6,11 @@ const { listListings, createListing, updateListing, toggleFavorite, sendMessage,
 
 const router = Router();
 
+const imageBase64Schema = Joi.alternatives().try(
+  Joi.string().base64({ paddingRequired: false }),
+  Joi.string().pattern(/^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/)
+);
+
 router.get('/', async (req, res, next) => {
   try {
     const schema = Joi.object({
@@ -42,7 +47,7 @@ router.post('/', authRequired, createLimiter, async (req, res, next) => {
       description: Joi.string().allow('').optional(),
       price: Joi.number().min(0).required(),
       photos: Joi.array().items(Joi.string()).default([]),
-      photosBase64: Joi.array().items(Joi.string().base64({ paddingRequired: false })).optional(),
+      photosBase64: Joi.array().items(imageBase64Schema).optional(),
       loc: Joi.object({ lat: Joi.number().required(), lng: Joi.number().required() }).optional(),
       availableFrom: Joi.date().optional(),
       availableTo: Joi.date().optional(),

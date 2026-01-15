@@ -21,7 +21,11 @@ async function uploadBase64ToCloudinary(base64, folder = 'uploads') {
     return `https://res.cloudinary.com/demo/image/upload/v1699999999/${folder}/placeholder.png`;
   }
   ensureConfig();
-  const res = await cloudinary.uploader.upload(base64, {
+  // Accept either raw base64 or a full data URL. Cloudinary expects a data URL.
+  const payload = typeof base64 === 'string' && base64.trim().startsWith('data:')
+    ? base64.trim()
+    : `data:image/jpeg;base64,${String(base64 || '').trim()}`;
+  const res = await cloudinary.uploader.upload(payload, {
     folder,
     resource_type: 'image',
     transformation: [{ width: 512, height: 512, crop: 'limit' }]

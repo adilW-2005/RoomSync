@@ -5,6 +5,11 @@ const { getAverageByPlace, listByPlace, createRating, updateRating, deleteRating
 
 const router = Router();
 
+const imageBase64Schema = Joi.alternatives().try(
+  Joi.string().base64({ paddingRequired: false }),
+  Joi.string().pattern(/^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/)
+);
+
 router.get('/avg', async (req, res, next) => {
   try {
     const schema = Joi.object({ placeId: Joi.string().required() });
@@ -84,7 +89,7 @@ router.post('/', authRequired, async (req, res, next) => {
       cons: Joi.array().items(Joi.string()).default([]),
       tips: Joi.string().allow('').default(''),
       photos: Joi.array().items(Joi.string()).default([]),
-      photosBase64: Joi.array().items(Joi.string().base64({ paddingRequired: false })).optional(),
+      photosBase64: Joi.array().items(imageBase64Schema).optional(),
     });
     const { error, value } = schema.validate(req.body);
     if (error) {
@@ -103,7 +108,7 @@ router.post('/', authRequired, async (req, res, next) => {
 
 router.patch('/:id', authRequired, async (req, res, next) => {
   try {
-    const schema = Joi.object({ stars: Joi.number().min(1).max(5).optional(), pros: Joi.array().items(Joi.string()).optional(), cons: Joi.array().items(Joi.string()).optional(), tips: Joi.string().allow('').optional(), photos: Joi.array().items(Joi.string()).optional(), photosBase64: Joi.array().items(Joi.string().base64({ paddingRequired: false })).optional() });
+    const schema = Joi.object({ stars: Joi.number().min(1).max(5).optional(), pros: Joi.array().items(Joi.string()).optional(), cons: Joi.array().items(Joi.string()).optional(), tips: Joi.string().allow('').optional(), photos: Joi.array().items(Joi.string()).optional(), photosBase64: Joi.array().items(imageBase64Schema).optional() });
     const { error, value } = schema.validate(req.body);
     if (error) {
       const err = new Error('Invalid input');

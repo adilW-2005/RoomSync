@@ -5,6 +5,11 @@ const { listInventory, createInventory, updateInventory, deleteInventory, getAle
 
 const router = Router();
 
+const imageBase64Schema = Joi.alternatives().try(
+  Joi.string().base64({ paddingRequired: false }),
+  Joi.string().pattern(/^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/)
+);
+
 router.get('/', authRequired, async (req, res, next) => {
   try {
     const schema = Joi.object({ groupId: Joi.string().optional(), q: Joi.string().allow('').optional(), category: Joi.string().optional(), tag: Joi.string().optional() });
@@ -58,7 +63,7 @@ router.post('/', authRequired, async (req, res, next) => {
       qty: Joi.number().min(0).required(),
       shared: Joi.boolean().default(false),
       expiresAt: Joi.date().optional(),
-      photoBase64: Joi.string().base64({ paddingRequired: false }).optional(),
+      photoBase64: imageBase64Schema.optional(),
       lowStockThreshold: Joi.number().min(0).default(0),
       categories: Joi.array().items(Joi.string()).default([]),
       tags: Joi.array().items(Joi.string()).default([]),
@@ -85,7 +90,7 @@ router.patch('/:id', authRequired, async (req, res, next) => {
       qty: Joi.number().min(0).optional(),
       shared: Joi.boolean().optional(),
       expiresAt: Joi.date().optional(),
-      photoBase64: Joi.string().base64({ paddingRequired: false }).optional(),
+      photoBase64: imageBase64Schema.optional(),
       lowStockThreshold: Joi.number().min(0).optional(),
       categories: Joi.array().items(Joi.string()).optional(),
       tags: Joi.array().items(Joi.string()).optional(),

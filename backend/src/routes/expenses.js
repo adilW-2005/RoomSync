@@ -5,6 +5,11 @@ const { listExpenses, createExpense, getBalances, getHistoryPaginated, settleUp,
 
 const router = Router();
 
+const imageBase64Schema = Joi.alternatives().try(
+  Joi.string().base64({ paddingRequired: false }),
+  Joi.string().pattern(/^data:image\/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=]+$/)
+);
+
 router.get('/', authRequired, async (req, res, next) => {
   try {
     const schema = Joi.object({ groupId: Joi.string().optional(), page: Joi.number().min(1).default(1), limit: Joi.number().min(1).max(100).default(20) });
@@ -40,7 +45,7 @@ router.post('/', authRequired, async (req, res, next) => {
         { is: 'equal', then: Joi.forbidden() },
       ]),
       notes: Joi.string().allow('').optional(),
-      receiptBase64: Joi.string().base64({ paddingRequired: false }).optional(),
+      receiptBase64: imageBase64Schema.optional(),
       recurring: Joi.object({
         enabled: Joi.boolean().required(),
         frequency: Joi.string().valid('weekly', 'monthly', 'custom').required(),
